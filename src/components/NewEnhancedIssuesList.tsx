@@ -403,7 +403,7 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
     }
 
     return (
-      <div className="space-y-4">
+      <div>
         <div className="rounded-md border m-4">
           <Table>
             <TableHeader>
@@ -490,16 +490,20 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
                   </>
                 );
               })}
+              
+              {/* Pagination Controls - Integrated into table */}
+              <TableRow className="border-t">
+                <TableCell colSpan={9} className="p-4">
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {Math.min((currentPage - 1) * issuesPerPage + 1, issues.length)} to {Math.min(currentPage * issuesPerPage, issues.length)} of {issues.length} issues
+                    </div>
+                    {renderPagination()}
+                  </div>
+                </TableCell>
+              </TableRow>
             </TableBody>
           </Table>
-        </div>
-        
-        {/* Pagination Controls */}
-        <div className="flex justify-between items-center">
-          <div className="text-sm text-muted-foreground">
-            Showing {Math.min((currentPage - 1) * issuesPerPage + 1, issues.length)} to {Math.min(currentPage * issuesPerPage, issues.length)} of {issues.length} issues
-          </div>
-          {renderPagination()}
         </div>
       </div>
     );
@@ -699,19 +703,23 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
                     </>
                   );
                 })}
+                
+                {/* Group Pagination Controls - Integrated into table */}
+                {data.length > issuesPerPage && (
+                  <TableRow className="border-t">
+                    <TableCell colSpan={9} className="p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {Math.min((groupPage - 1) * issuesPerPage + 1, data.length)} to {Math.min(groupPage * issuesPerPage, data.length)} of {data.length} issues
+                        </div>
+                        {renderGroupPagination()}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
-          
-          {/* Group Pagination Controls */}
-          {data.length > issuesPerPage && (
-            <div className="flex justify-between items-center px-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {Math.min((groupPage - 1) * issuesPerPage + 1, data.length)} to {Math.min(groupPage * issuesPerPage, data.length)} of {data.length} issues
-              </div>
-              {renderGroupPagination()}
-            </div>
-          )}
         </div>
       );
     }
