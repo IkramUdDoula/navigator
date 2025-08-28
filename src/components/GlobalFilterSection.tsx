@@ -1,0 +1,208 @@
+import React, { useMemo } from 'react';
+import { Input } from '@/components/ui/input';
+import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
+import { Search, Circle, User, Tag } from 'lucide-react';
+import { GitLabIssue, GitLabUser } from '@/types/gitlab';
+import { useDebounce } from '@/components/PerformanceOptimizations';
+
+interface GlobalFilterSectionProps {
+  issues: GitLabIssue[];
+  users: GitLabUser[];
+  onFilteredDataChange: (filteredIssues: GitLabIssue[], hasActiveFilters: boolean, selectedFilters?: { assignees?: string[] }) => void;
+}
+
+export function GlobalFilterSection({ issues, users, onFilteredDataChange }: GlobalFilterSectionProps) {
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [selectedStatuses, setSelectedStatuses] = React.useState<string[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = React.useState<string[]>([]);
+  const [selectedLabels, setSelectedLabels] = React.useState<string[]>([]);
+
+  // Debounce search term to prevent excessive filtering
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Extract unique labels from issues
+  const allLabels = useMemo(() => {
+    const labels = new Set<string>();
+    issues.forEach(issue => {
+      issue.labels.forEach(label => labels.add(label));
+    });
+    return Array.from(labels).sort();
+  }, [issues]);
+
+  // Create options for filters
+  const statusOptions = [
+    { value: 'opened', label: 'Open' },
+    { value: 'closed', label: 'Closed' }
+  ];
+
+  const assigneeOptions = useMemo(() => {
+    return users.map(user => ({
+      value: user.id.toString(),
+      label: user.name
+    }));
+  }, [users]);
+
+  const labelOptions = useMemo(() => {
+    return allLabels.map(label => ({
+      value: label,
+      label: label
+    }));
+  }, [allLabels]);
+
+  // Apply filters
+  const filteredIssues = useMemo(() => {
+    return issues.filter(issue => {
+      // Search filter
+      if (debouncedSearchTerm && 
+          !issue.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) && 
+          !`#${issue.iid}`.includes(debouncedSearchTerm)) {
+        return false;
+      }
+      
+      // Status filter
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(issue.state)) {
+        return false;
+      }
+      
+      // Assignee filter
+      if (selectedAssignees.length > 0) {
+        const issueAssigneeIds = issue.assignees.map(a => a.id.toString());
+        if (!selectedAssignees.some(id => issueAssigneeIds.includes(id))) {
+          return false;
+        }
+      }
+      
+      // Label filter
+      if (selectedLabels.length > 0) {
+        if (!selectedLabels.some(label => issue.labels.includes(label))) {
+          return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [issues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels]);
+
+  // Notify parent of filtered data changes
+  React.useEffect(() => {
+    const hasActiveFilters = !!searchTerm || selectedStatuses.length > 0 || 
+                            selectedAssignees.length > 0 || selectedLabels.length > 0;
+    onFilteredDataChange(filteredIssues, hasActiveFilters, { assignees: selectedAssignees });
+  }, [filteredIssues, onFilteredDataChange, searchTerm, selectedStatuses, selectedAssignees, selectedLabels]);
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setSelectedStatuses([]);
+    setSelectedAssignees([]);
+    setSelectedLabels([]);
+  };
+
+  const hasActiveFilters = searchTerm || selectedStatuses.length > 0 || 
+                          selectedAssignees.length > 0 || selectedLabels.length > 0;
+
+  // Check if we should show "No issues found" messages
+  const showNoAssigneeIssues = selectedAssignees.length > 0 && 
+    !issues.some(issue => {
+      const issueAssigneeIds = issue.assignees.map(a => a.id.toString());
+      return selectedAssignees.some(id => issueAssigneeIds.includes(id));
+    });
+
+  const showNoLabelIssues = selectedLabels.length > 0 && 
+    !issues.some(issue => 
+      selectedLabels.some(label => issue.labels.includes(label))
+    );
+
+  const showNoStatusIssues = selectedStatuses.length > 0 && 
+    !issues.some(issue => selectedStatuses.includes(issue.state));
+
+  const showNoSearchResults = debouncedSearchTerm && filteredIssues.length === 0;
+
+  return (
+    <div className="border-b bg-muted/30 p-4">
+      <div className="flex flex-col gap-4">
+        {/* Search Input */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by issue title or #IID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+        
+        {/* No results messages */}
+        {showNoAssigneeIssues && (
+          <div className="text-sm text-muted-foreground py-2">
+            No issues found for the selected assignee(s)
+          </div>
+        )}
+        
+        {showNoLabelIssues && (
+          <div className="text-sm text-muted-foreground py-2">
+            No issues found with the selected label(s)
+          </div>
+        )}
+        
+        {showNoStatusIssues && (
+          <div className="text-sm text-muted-foreground py-2">
+            No issues found with the selected status(es)
+          </div>
+        )}
+        
+        {showNoSearchResults && (
+          <div className="text-sm text-muted-foreground py-2">
+            No issues found matching "{debouncedSearchTerm}"
+          </div>
+        )}
+        
+        {/* Filter Controls */}
+        <div className="flex flex-wrap gap-4">
+          {/* Status Filter */}
+          <div className="flex-1 min-w-[150px]">
+            <SearchableMultiSelect
+              options={statusOptions}
+              selected={selectedStatuses}
+              onChange={setSelectedStatuses}
+              placeholder="Status"
+              icon={<Circle className="h-4 w-4" />}
+            />
+          </div>
+          
+          {/* Assignee Filter */}
+          <div className="flex-1 min-w-[150px]">
+            <SearchableMultiSelect
+              options={assigneeOptions}
+              selected={selectedAssignees}
+              onChange={setSelectedAssignees}
+              placeholder="Assignee"
+              icon={<User className="h-4 w-4" />}
+            />
+          </div>
+          
+          {/* Label Filter */}
+          <div className="flex-1 min-w-[150px]">
+            <SearchableMultiSelect
+              options={labelOptions}
+              selected={selectedLabels}
+              onChange={setSelectedLabels}
+              placeholder="Label"
+              icon={<Tag className="h-4 w-4" />}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
