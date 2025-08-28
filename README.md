@@ -21,7 +21,7 @@ Navigator is a modern, enhanced UI for interacting with GitLab, providing powerf
 
 ```bash
 # Clone the repository
-git clone <YOUR_GIT_URL>
+git clone https://github.com/IkramUdDoula/navigator.git
 
 # Navigate to the project directory
 cd Navigator
