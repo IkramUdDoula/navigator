@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
-import { Search, Circle, User, Tag } from 'lucide-react';
+import { Search, Circle, User, Tag, Folder } from 'lucide-react';
 import { GitLabIssue, GitLabUser } from '@/types/gitlab';
 import { useDebounce } from '@/components/PerformanceOptimizations';
 
@@ -16,6 +16,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
   const [selectedStatuses, setSelectedStatuses] = React.useState<string[]>([]);
   const [selectedAssignees, setSelectedAssignees] = React.useState<string[]>([]);
   const [selectedLabels, setSelectedLabels] = React.useState<string[]>([]);
+  const [selectedProjects, setSelectedProjects] = React.useState<string[]>([]);
 
   // Debounce search term to prevent excessive filtering
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -27,6 +28,24 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
       issue.labels.forEach(label => labels.add(label));
     });
     return Array.from(labels).sort();
+  }, [issues]);
+
+  // Extract unique projects from issues
+  const allProjects = useMemo(() => {
+    const projects = new Set<string>();
+    issues.forEach(issue => {
+      if (issue.web_url) {
+        try {
+          const projectName = new URL(issue.web_url).pathname.split('/')[2];
+          if (projectName) {
+            projects.add(projectName);
+          }
+        } catch (e) {
+          // Ignore invalid URLs
+        }
+      }
+    });
+    return Array.from(projects).sort();
   }, [issues]);
 
   // Create options for filters
@@ -48,6 +67,13 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
       label: label
     }));
   }, [allLabels]);
+
+  const projectOptions = useMemo(() => {
+    return allProjects.map(project => ({
+      value: project,
+      label: project
+    }));
+  }, [allProjects]);
 
   // Apply filters
   const filteredIssues = useMemo(() => {
@@ -79,26 +105,45 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
         }
       }
       
+      // Project filter
+      if (selectedProjects.length > 0) {
+        if (issue.web_url) {
+          try {
+            const projectName = new URL(issue.web_url).pathname.split('/')[2];
+            if (!selectedProjects.includes(projectName)) {
+              return false;
+            }
+          } catch (e) {
+            // If we can't parse the URL, exclude the issue if any project filter is active
+            return false;
+          }
+        } else {
+          // If no web_url, exclude the issue if any project filter is active
+          return false;
+        }
+      }
+      
       return true;
     });
-  }, [issues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels]);
+  }, [issues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects]);
 
   // Notify parent of filtered data changes
   React.useEffect(() => {
     const hasActiveFilters = !!searchTerm || selectedStatuses.length > 0 || 
-                            selectedAssignees.length > 0 || selectedLabels.length > 0;
+                            selectedAssignees.length > 0 || selectedLabels.length > 0 || selectedProjects.length > 0;
     onFilteredDataChange(filteredIssues, hasActiveFilters, { assignees: selectedAssignees });
-  }, [filteredIssues, onFilteredDataChange, searchTerm, selectedStatuses, selectedAssignees, selectedLabels]);
+  }, [filteredIssues, onFilteredDataChange, searchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects]);
 
   const clearAllFilters = () => {
     setSearchTerm('');
     setSelectedStatuses([]);
     setSelectedAssignees([]);
     setSelectedLabels([]);
+    setSelectedProjects([]);
   };
 
   const hasActiveFilters = searchTerm || selectedStatuses.length > 0 || 
-                          selectedAssignees.length > 0 || selectedLabels.length > 0;
+                          selectedAssignees.length > 0 || selectedLabels.length > 0 || selectedProjects.length > 0;
 
   // Check if we should show "No issues found" messages
   const showNoAssigneeIssues = selectedAssignees.length > 0 && 
@@ -114,6 +159,19 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
 
   const showNoStatusIssues = selectedStatuses.length > 0 && 
     !issues.some(issue => selectedStatuses.includes(issue.state));
+
+  const showNoProjectIssues = selectedProjects.length > 0 && 
+    !issues.some(issue => {
+      if (issue.web_url) {
+        try {
+          const projectName = new URL(issue.web_url).pathname.split('/')[2];
+          return selectedProjects.includes(projectName);
+        } catch (e) {
+          return false;
+        }
+      }
+      return false;
+    });
 
   const showNoSearchResults = debouncedSearchTerm && filteredIssues.length === 0;
 
@@ -161,6 +219,12 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
           </div>
         )}
         
+        {showNoProjectIssues && (
+          <div className="text-sm text-muted-foreground py-2">
+            No issues found for the selected project(s)
+          </div>
+        )}
+        
         {showNoSearchResults && (
           <div className="text-sm text-muted-foreground py-2">
             No issues found matching "{debouncedSearchTerm}"
@@ -199,6 +263,17 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
               onChange={setSelectedLabels}
               placeholder="Label"
               icon={<Tag className="h-4 w-4" />}
+            />
+          </div>
+          
+          {/* Project Filter */}
+          <div className="flex-1 min-w-[150px]">
+            <SearchableMultiSelect
+              options={projectOptions}
+              selected={selectedProjects}
+              onChange={setSelectedProjects}
+              placeholder="Project"
+              icon={<Folder className="h-4 w-4" />}
             />
           </div>
         </div>
