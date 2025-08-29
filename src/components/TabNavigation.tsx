@@ -1,7 +1,7 @@
-import { List, Users, BarChart3 } from 'lucide-react';
+import { List, Users, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export type TabType = 'issues' | 'team';
+export type TabType = 'issues' | 'team' | 'sprint';
 
 interface TabNavigationProps {
   activeTab: TabType;
@@ -12,6 +12,7 @@ interface TabNavigationProps {
 export function TabNavigation({ activeTab, onTabChange, issueCount }: TabNavigationProps) {
   const tabs = [
     { id: 'issues' as const, label: 'Issues', icon: List },
+    { id: 'sprint' as const, label: 'Sprint Planning', icon: Calendar },
     { id: 'team' as const, label: 'Team', icon: Users },
   ];
 
