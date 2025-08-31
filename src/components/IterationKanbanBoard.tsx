@@ -2,9 +2,11 @@ import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './KanbanCard';
+import { SprintAnalytics } from './SprintAnalytics';
 import { GitLabIssue, GitLabCredentials } from '@/types/gitlab';
 import { StatusBadge } from './StatusBadge';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useGitLabUsers } from '@/hooks/useGitLabAPI';
 import { cn } from '@/lib/utils';
 
 interface IterationKanbanBoardProps {
@@ -28,6 +30,9 @@ export function IterationKanbanBoard({
   // Get credentials for basic functionality
   const [credentials] = useLocalStorage<GitLabCredentials | null>('gitlab-credentials', null);
   
+  // Fetch users for sprint analytics
+  const { data: users = [] } = useGitLabUsers(credentials);
+  
   // Get the current iteration - find the most recent active iteration
   const currentIteration = useMemo(() => {
     // Get all unique iterations from issues
@@ -40,6 +45,30 @@ export function IterationKanbanBoard({
     // In a real scenario, you might want to determine "current" by date or status
     return iterations.length > 0 ? iterations[0] : null;
   }, [issues]);
+
+  // Get milestone data for the current iteration
+  const currentMilestone = useMemo(() => {
+    if (!currentIteration) return undefined;
+    
+    // Find milestone that matches current iteration
+    const milestone = issues.find(issue => 
+      issue.milestone?.title === currentIteration
+    )?.milestone;
+    
+    return milestone;
+  }, [issues, currentIteration]);
+
+  // Get iteration data for more accurate time calculations
+  const currentIterationData = useMemo(() => {
+    if (!currentIteration) return undefined;
+    
+    // Find iteration data from issues
+    const iterationData = issues.find(issue => 
+      issue.iteration?.title === currentIteration
+    )?.iteration;
+    
+    return iterationData;
+  }, [issues, currentIteration]);
 
   // Filter and group issues by status
   const statusColumns = useMemo(() => {
@@ -140,21 +169,31 @@ export function IterationKanbanBoard({
   const totalIssues = statusColumns.reduce((sum, col) => sum + col.issues.length, 0);
 
   return (
-    <div className={cn("p-6 space-y-6", className)}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">
-            {currentIteration || 'No Active Iteration'}
-          </h2>
-          <p className="text-muted-foreground">
-            {totalIssues} {totalIssues === 1 ? 'issue' : 'issues'}
-          </p>
+    <div className={cn("space-y-6", className)}>
+      {/* Sprint Analytics - Above Kanban Board */}
+      <SprintAnalytics 
+        issues={issues}
+        users={users}
+        currentIteration={currentIteration}
+        milestone={currentMilestone}
+        className="bg-muted/30 rounded-lg"
+      />
+
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">
+              {currentIteration || 'No Active Iteration'}
+            </h2>
+            <p className="text-muted-foreground">
+              {totalIssues} {totalIssues === 1 ? 'issue' : 'issues'}
+            </p>
+          </div>
+          <Badge variant="outline" className="text-lg px-3 py-1">
+            Kanban Board
+          </Badge>
         </div>
-        <Badge variant="outline" className="text-lg px-3 py-1">
-          Kanban Board
-        </Badge>
-      </div>
 
       {/* Kanban Board */}
       <div className="flex gap-4 min-h-[500px] w-full">
@@ -212,6 +251,7 @@ export function IterationKanbanBoard({
           </p>
         </div>
       )}
+      </div>
     </div>
   );
 }

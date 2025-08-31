@@ -1,5 +1,42 @@
 import { GitLabIssue, GitLabUser, UserMetrics, ProjectMetrics } from '@/types/gitlab';
 
+// Additional interfaces for team metrics
+interface SprintMetrics {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  totalIssues: number;
+  completedIssues: number;
+  velocity: number;
+  completionRate: number;
+}
+
+interface WorkloadMetrics {
+  userId: number;
+  userName: string;
+  totalTasks: number;
+  byProject: Record<string, number>;
+  bySprint: Record<string, number>;
+  byPriority: Record<string, number>;
+}
+
+interface CompletionMetrics {
+  userId: number;
+  userName: string;
+  completionRate: number;
+  avgTimeToClose: number;
+  reopenRate: number;
+}
+
+interface Alert {
+  userId: number;
+  userName: string;
+  type: 'behind-schedule' | 'overloaded' | 'high-performing';
+  message: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
 /**
  * Calculate user metrics from issues and users
  */

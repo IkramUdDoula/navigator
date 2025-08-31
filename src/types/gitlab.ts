@@ -27,8 +27,13 @@ export interface GitLabIssue {
     time_estimate: number;
     total_time_spent: number;
   };
+  // Extended fields for iteration support
   iteration?: {
     title: string;
+    start_date?: string;
+    due_date?: string;
+    id: number;
+    state: 'opened' | 'upcoming' | 'started' | 'closed';
   };
   epic?: {
     title: string;
@@ -53,9 +58,10 @@ export interface GitLabUser {
 export interface GitLabMilestone {
   id: number;
   title: string;
-  state: 'active' | 'closed';
+  state: 'active' | 'closed' | 'upcoming' | 'started';
   start_date?: string;
   due_date?: string;
+  description?: string;
 }
 
 export interface GitLabBoard {
@@ -307,4 +313,60 @@ export interface ValueStreamMetrics {
     averageTimeHours: number;
     percentageOfTotal: number;
   }[];
+}
+
+// Sprint Analytics Types
+export interface SprintMetrics {
+  totalIssues: number;
+  completedIssues: number;
+  completionRate: number;
+  timeRemaining: number;
+  achievedVelocity: number;
+  requiredVelocity: number;
+  estimatedHours: number;
+  spentHours: number;
+  sprintCapacityHours: number;
+}
+
+export interface SprintVelocityMetrics {
+  achievedVelocity: number;
+  requiredVelocity: number;
+  elapsedDays: number;
+  remainingDays: number;
+  status: 'good' | 'poor' | 'neutral';
+  // Enhanced capacity breakdown
+  capacityBreakdown: {
+    totalTeamCapacity: number;
+    dailyCapacity: number;
+    utilizationPercentage: number;
+    teamMemberCount: number;
+    workingHoursPerDay: number;
+  };
+}
+
+export interface SprintTimeMetrics {
+  sprintStartDate: string;
+  sprintEndDate: string;
+  totalSprintDays: number;
+  elapsedDays: number;
+  remainingDays: number;
+  elapsedPercentage: number;
+}
+
+export interface SprintHourMetrics {
+  totalEstimated: number;
+  totalSpent: number;
+  sprintCapacity: number;
+  utilizationPercentage: number;
+  progressPercentage: number;
+  efficiency: 'good' | 'poor' | 'neutral';
+}
+
+export interface MetricCardProps {
+  title: string;
+  primaryValue: string | number;
+  subtext: string;
+  statusIndicator?: 'good' | 'poor' | 'neutral';
+  comparisonValue?: string;
+  className?: string;
 }
