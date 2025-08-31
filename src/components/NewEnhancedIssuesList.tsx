@@ -793,7 +793,7 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
             variant={selectedGrouping.includes(option.id) ? "default" : "outline"}
             size="sm"
             onClick={() => toggleGroupingOption(option.id)}
-            className="text-xs"
+            className={`text-xs ${selectedGrouping.includes(option.id) ? 'dark:bg-white dark:text-black' : ''}`}
           >
             {option.label}
           </Button>
