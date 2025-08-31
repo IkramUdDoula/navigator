@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
-import { Search, Circle, User, Tag, Folder, Calendar } from 'lucide-react';
+import { Search, Circle, User, Tag, Folder, Calendar, X } from 'lucide-react';
 import { GitLabIssue, GitLabUser } from '@/types/gitlab';
 import { useDebounce } from '@/components/PerformanceOptimizations';
 
@@ -260,12 +261,15 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
           </div>
           
           {hasActiveFilters && (
-            <button
+            <Button
               onClick={clearAllFilters}
-              className="text-sm text-muted-foreground hover:text-foreground underline"
+              variant="secondary"
+              size="sm"
+              className="flex items-center gap-1"
             >
+              <X className="h-4 w-4" />
               Clear all
-            </button>
+            </Button>
           )}
         </div>
         

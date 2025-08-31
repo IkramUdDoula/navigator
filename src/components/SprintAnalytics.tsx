@@ -62,7 +62,7 @@ export function SprintAnalytics({
       return null;
     }
     
-    return calculateHourMetrics(issues, users || [], timeMetrics.totalSprintDays);
+    return calculateHourMetrics(issues, users || [], timeMetrics.totalSprintDays, timeMetrics.elapsedPercentage);
   }, [issues, users, timeMetrics]);
 
   if (!sprintMetrics || !velocityMetrics || !hourMetrics) {
@@ -149,8 +149,7 @@ export function SprintAnalytics({
         <MetricCard
           title="Progress Hours"
           primaryValue={formatHours(hourMetrics.totalSpent)}
-          subtext="Time spent"
-          comparisonValue={`${formatPercentage(hourMetrics.progressPercentage)} of estimated`}
+          subtext={`Time spent (${formatPercentage(hourMetrics.progressPercentage)} of estimated)`}
           statusIndicator={hourMetrics.efficiency}
         />
       </div>

@@ -39,7 +39,7 @@ export function calculateSprintMetrics(
   const velocityMetrics = calculateVelocityMetrics(sprintIssues, timeMetrics, users || []);
   
   // Calculate hour metrics
-  const hourMetrics = calculateHourMetrics(sprintIssues, users || [], timeMetrics.totalSprintDays);
+  const hourMetrics = calculateHourMetrics(sprintIssues, users || [], timeMetrics.totalSprintDays, timeMetrics.elapsedPercentage);
 
   return {
     totalIssues,
@@ -203,7 +203,8 @@ export function calculateTimeMetrics(milestone?: GitLabMilestone, iteration?: { 
 export function calculateHourMetrics(
   issues: GitLabIssue[], 
   users: GitLabUser[], 
-  sprintDuration: number
+  sprintDuration: number,
+  elapsedPercentage: number = 0
 ): SprintHourMetrics {
   // Calculate total estimated hours from issues (convert seconds to hours)
   const totalEstimated = issues.reduce((sum, issue) => {
@@ -235,11 +236,11 @@ export function calculateHourMetrics(
     ? (issues.filter(i => i.state === 'closed').length / issues.length) * 100 
     : 0;
   
-  // Determine efficiency status
+  // Determine efficiency status based on relation to sprint time progress
   let efficiency: 'good' | 'poor' | 'neutral' = 'neutral';
-  if (totalEstimated > 0 && completionPercentage > 0) {
-    const efficiencyGap = Math.abs(progressPercentage - completionPercentage);
-    efficiency = efficiencyGap <= 15 ? 'good' : 'poor'; // 15% tolerance
+  if (totalEstimated > 0 && elapsedPercentage > 0) {
+    // Compare progress percentage with elapsed percentage of sprint
+    efficiency = progressPercentage >= elapsedPercentage ? 'good' : 'poor';
   }
     
   return {

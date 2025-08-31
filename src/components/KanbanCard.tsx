@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Clock, User } from 'lucide-react';
+import { Clock, User, Tag } from 'lucide-react';
 import { GitLabIssue } from '@/types/gitlab';
 import { cn } from '@/lib/utils';
 
@@ -50,7 +50,7 @@ export function KanbanCard({ issue, onClick, className, borderColor }: KanbanCar
         </div>
         
         {/* Second line - Issue title (big font) */}
-        <div className="font-semibold text-sm leading-tight line-clamp-2">
+        <div className="font-semibold text-sm leading-tight">
           {issue.title}
         </div>
         
@@ -78,10 +78,17 @@ export function KanbanCard({ issue, onClick, className, borderColor }: KanbanCar
           )}
         </div>
         
-        {/* Fourth line - All labels as comma-separated text */}
+        {/* Fourth line - All labels with bullet points */}
         {issue.labels.length > 0 && (
-          <div className="text-xs text-muted-foreground line-clamp-2">
-            {issue.labels.map(label => label.replace('Status::', '')).join(', ')}
+          <div className="flex items-start gap-1 text-xs text-muted-foreground">
+            <div className="flex flex-col space-y-0.5">
+              {issue.labels.map((label, index) => (
+                <div key={index} className="flex items-start gap-1">
+                  <span className="text-muted-foreground/70 mt-0.5">•</span>
+                  <span className="line-clamp-1">{label.replace('Status::', '')}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         
