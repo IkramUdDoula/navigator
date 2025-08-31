@@ -5,7 +5,7 @@ import { Header } from '@/components/Header';
 import { TabNavigation, TabType } from '@/components/TabNavigation';
 import { NewEnhancedIssuesList } from '@/components/NewEnhancedIssuesList';
 import { TeamTab } from '@/components/TeamTab';
-import { SprintPlanningTab } from '@/components/SprintPlanningTab';
+
 import { GlobalFilterSection } from '@/components/GlobalFilterSection';
 
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -80,12 +80,7 @@ const Index = () => {
     switch (activeTab) {
       case 'issues':
         return <NewEnhancedIssuesList issues={issuesToShow} isLoading={issuesLoading} />;
-      case 'sprint':
-        return <SprintPlanningTab 
-          issues={issuesToShow} 
-          users={users} 
-          isLoading={issuesLoading || usersLoading} 
-        />;
+
       case 'team':
         return <TeamTab 
           issues={issuesToShow} 
