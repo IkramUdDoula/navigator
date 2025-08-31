@@ -12,6 +12,8 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useGitLabIssuesWithEnhancedStatus, useGitLabUsers } from '@/hooks/useGitLabAPI';
 import { GitLabCredentials, GitLabIssue } from '@/types/gitlab';
 
+const INACTIVITY_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+
 const Index = () => {
   const [credentials, setCredentials] = useLocalStorage<GitLabCredentials | null>('gitlab-credentials', null);
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
@@ -21,17 +23,40 @@ const Index = () => {
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]); // Track selected assignees
   const [selectedIterations, setSelectedIterations] = useState<string[]>([]); // Track selected iterations
+  const [lastActiveTime, setLastActiveTime] = useLocalStorage<number>('last-active-time', Date.now());
 
   // Apply theme to document
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
+  // Check for inactivity and refresh if needed
+  useEffect(() => {
+    const now = Date.now();
+    const inactiveDuration = now - lastActiveTime;
+    
+    // If inactive for more than threshold, refresh data
+    if (inactiveDuration > INACTIVITY_THRESHOLD && credentials) {
+      // Force refresh of data
+      window.location.reload();
+    }
+    
+    // Update last active time
+    setLastActiveTime(now);
+    
+    // Set up interval to update last active time
+    const interval = setInterval(() => {
+      setLastActiveTime(Date.now());
+    }, 60000); // Update every minute
+    
+    return () => clearInterval(interval);
+  }, [lastActiveTime, credentials, setLastActiveTime]);
+
   const currentCredentials = credentials ? { ...credentials, groupId: groupPath } : null;
 
   // Fetch issues with enhanced status resolution
-  const { data: issues = [], isLoading: issuesLoading } = useGitLabIssuesWithEnhancedStatus(currentCredentials);
-  const { data: users = [], isLoading: usersLoading } = useGitLabUsers(currentCredentials);
+  const { data: issues = [], isLoading: issuesLoading, refetch: refetchIssues } = useGitLabIssuesWithEnhancedStatus(currentCredentials);
+  const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useGitLabUsers(currentCredentials);
 
   // Determine the current iteration based on the logic from IterationKanbanBoard
   const defaultIteration = useMemo(() => {

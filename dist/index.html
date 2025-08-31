@@ -3,12 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <title>Navigator</title>
-    <meta name="description" content="Navigator - GitLab Enhanced UI" />
+    <meta name="description" content="Navigator - GitLab Analytics" />
     <meta name="author" content="Navigator Team" />
 
     <meta property="og:title" content="Navigator" />
-    <meta property="og:description" content="Navigator - GitLab Enhanced UI" />
+    <meta property="og:description" content="Navigator - GitLab Analytics" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="" />
 
@@ -24,26 +27,11 @@
     <meta name="apple-mobile-web-app-title" content="Navigator" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <script type="module" crossorigin src="/assets/index-VmfRDjj9.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-C202u7HX.css">
+    <script type="module" crossorigin src="/assets/index-DbyfiyPS.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BA41VX2h.css">
   </head>
 
   <body>
-    <div id="root"></div>
-
-    <script>
-      // Register service worker for PWA functionality
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('SW registered: ', registration);
-            })
-            .catch((registrationError) => {
-              console.log('SW registration failed: ', registrationError);
-            });
-        });
-      }
-    </script>
+    <div id="root"></div>
   </body>
 </html>

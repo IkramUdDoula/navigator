@@ -1,4 +1,4 @@
-// Simple service worker for PWA functionality
+// Simple service worker for PWA functionality with hot reload support
 const CACHE_NAME = 'gitlab-lens-v1';
 const urlsToCache = [
   '/',
@@ -22,6 +22,15 @@ self.addEventListener('install', (event) => {
 
 // Fetch event - serve cached content when offline
 self.addEventListener('fetch', (event) => {
+  // For hot reload, bypass cache for HTML requests to ensure fresh content
+  if (event.request.destination === 'document') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -45,4 +54,11 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+});
+
+// Message event - handle hot reload requests
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
