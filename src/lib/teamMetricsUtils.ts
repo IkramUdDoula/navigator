@@ -73,6 +73,15 @@ export function calculateUserMetrics(issues: GitLabIssue[], users: GitLabUser[])
       return dueDate < new Date();
     }).length;
     
+    // Calculate total estimated hours
+    const totalEstimatedHours = userIssues.reduce((total, issue) => {
+      // Convert time_estimate from seconds to hours and add to total
+      const estimateInHours = issue.time_stats?.time_estimate
+        ? issue.time_stats.time_estimate / 3600  // Convert seconds to hours
+        : 0;
+      return total + estimateInHours;
+    }, 0);
+    
     const completionRate = totalIssues > 0 ? (completedIssues / totalIssues) * 100 : 0;
     
     // Calculate average time to close issues (in days)
@@ -125,6 +134,7 @@ export function calculateUserMetrics(issues: GitLabIssue[], users: GitLabUser[])
       completedIssues,
       pendingIssues,
       overdueIssues,
+      totalEstimatedHours: Number(totalEstimatedHours.toFixed(1)),
       completionRate,
       avgTimeToClose,
       reopenRate,

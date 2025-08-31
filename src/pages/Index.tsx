@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AuthForm } from '@/components/AuthForm';
 import { Header } from '@/components/Header';
 import { TabNavigation, TabType } from '@/components/TabNavigation';
@@ -20,6 +20,7 @@ const Index = () => {
   const [filteredIssues, setFilteredIssues] = useState<GitLabIssue[]>([]);
   const [hasActiveFilters, setHasActiveFilters] = useState(false);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]); // Track selected assignees
+  const [selectedIterations, setSelectedIterations] = useState<string[]>([]); // Track selected iterations
 
   // Apply theme to document
   useEffect(() => {
@@ -40,6 +41,84 @@ const Index = () => {
   const { data: issues = [], isLoading: issuesLoading } = useGitLabIssuesWithEnhancedStatus(currentCredentials);
   const { data: users = [], isLoading: usersLoading } = useGitLabUsers(currentCredentials);
 
+  // Determine the current iteration based on the logic from IterationKanbanBoard
+  const defaultIteration = useMemo(() => {
+    // Get all unique iterations from issues with their metadata
+    const iterationsMap = new Map<string, {
+      title: string;
+      start_date?: string;
+      due_date?: string;
+      state: string;
+      issueCount: number;
+    }>();
+
+    issues.forEach(issue => {
+      if (issue.iteration?.title) {
+        const existing = iterationsMap.get(issue.iteration.title);
+        iterationsMap.set(issue.iteration.title, {
+          title: issue.iteration.title,
+          start_date: issue.iteration.start_date,
+          due_date: issue.iteration.due_date,
+          state: issue.iteration.state,
+          issueCount: (existing?.issueCount || 0) + 1
+        });
+      }
+    });
+
+    if (iterationsMap.size === 0) {
+      return null;
+    }
+
+    const now = new Date();
+    const iterations = Array.from(iterationsMap.values());
+
+    // Priority 1: Find iteration with state 'started' that contains current date
+    const startedIterations = iterations.filter(iter => iter.state === 'started');
+    for (const iter of startedIterations) {
+      if (iter.start_date && iter.due_date) {
+        const start = new Date(iter.start_date);
+        const end = new Date(iter.due_date);
+        if (now >= start && now <= end) {
+          return iter.title;
+        }
+      }
+    }
+
+    // Priority 2: If no active iteration found, take the most recent 'started' iteration
+    if (startedIterations.length > 0) {
+      // Sort by start date descending (most recent first)
+      const mostRecentStarted = startedIterations
+        .filter(iter => iter.start_date)
+        .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime())[0];
+      
+      if (mostRecentStarted) {
+        return mostRecentStarted.title;
+      }
+    }
+
+    // Priority 3: Find iteration that contains current date (regardless of state)
+    for (const iter of iterations) {
+      if (iter.start_date && iter.due_date) {
+        const start = new Date(iter.start_date);
+        const end = new Date(iter.due_date);
+        if (now >= start && now <= end) {
+          return iter.title;
+        }
+      }
+    }
+
+    // Priority 4: Take the iteration with most issues
+    const mostPopular = iterations.sort((a, b) => b.issueCount - a.issueCount)[0];
+    return mostPopular.title;
+  }, [issues]);
+
+  // Set the default iteration as the initial selected iteration
+  useEffect(() => {
+    if (defaultIteration && selectedIterations.length === 0) {
+      setSelectedIterations([defaultIteration]);
+    }
+  }, [defaultIteration, selectedIterations.length]);
+
   const handleCredentialsSubmit = (newCredentials: GitLabCredentials) => {
     setCredentials(newCredentials);
     setGroupPath(newCredentials.groupId);
@@ -53,11 +132,14 @@ const Index = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
-  const handleFilteredDataChange = (newFilteredIssues: GitLabIssue[], activeFilters: boolean, selectedFilters?: { assignees?: string[] }) => {
+  const handleFilteredDataChange = (newFilteredIssues: GitLabIssue[], activeFilters: boolean, selectedFilters?: { assignees?: string[], iterations?: string[] }) => {
     setFilteredIssues(newFilteredIssues);
     setHasActiveFilters(activeFilters);
     if (selectedFilters?.assignees) {
       setSelectedAssignees(selectedFilters.assignees);
+    }
+    if (selectedFilters?.iterations) {
+      setSelectedIterations(selectedFilters.iterations);
     }
   };
 

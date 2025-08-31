@@ -13,7 +13,7 @@ export function TabNavigation({ activeTab, onTabChange, issueCount }: TabNavigat
   const tabs = [
     { id: 'issues' as const, label: 'Issues', icon: List },
     { id: 'team' as const, label: 'Team', icon: Users },
-    { id: 'iteration' as const, label: 'Current Iteration', icon: Calendar },
+    { id: 'iteration' as const, label: 'Iteration', icon: Calendar },
   ];
 
   return (

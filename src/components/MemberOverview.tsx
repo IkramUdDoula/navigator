@@ -55,8 +55,8 @@ export function MemberOverview({ users, userMetrics }: MemberOverviewProps) {
                         <p className="font-semibold">{metrics.pendingIssues}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Overdue</p>
-                        <p className="font-semibold">{metrics.overdueIssues}</p>
+                        <p className="text-muted-foreground">Estimated Hours</p>
+                        <p className="font-semibold">{metrics.totalEstimatedHours}h</p>
                       </div>
                     </div>
                   )}

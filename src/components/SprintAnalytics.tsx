@@ -23,17 +23,13 @@ import { cn } from '@/lib/utils';
 
 interface SprintAnalyticsProps {
   issues: GitLabIssue[];
-  users: GitLabUser[];
-  currentIteration: string | null;
-  milestone?: GitLabMilestone;
+  users?: GitLabUser[] | null;
   className?: string;
 }
 
 export function SprintAnalytics({ 
   issues, 
   users, 
-  currentIteration, 
-  milestone, 
   className 
 }: SprintAnalyticsProps) {
   const sprintMetrics = useMemo(() => {
@@ -41,43 +37,33 @@ export function SprintAnalytics({
       return null;
     }
     
-    return calculateSprintMetrics(issues, currentIteration, users, milestone);
-  }, [issues, users, currentIteration, milestone]);
+    return calculateSprintMetrics(issues, users || [], undefined);
+  }, [issues, users]);
 
   const timeMetrics = useMemo(() => {
     // Get iteration data from the first issue that has it
     const currentIterationData = issues.find(issue => 
-      issue.iteration?.title === currentIteration
+      issue.iteration
     )?.iteration;
     
-    return calculateTimeMetrics(milestone, currentIterationData);
-  }, [milestone, issues, currentIteration]);
+    return calculateTimeMetrics(undefined, currentIterationData);
+  }, [issues]);
 
   const velocityMetrics = useMemo(() => {
     if (!issues.length) {
       return null;
     }
     
-    // Filter issues for current iteration ONLY - exclude milestone-based filtering
-    const sprintIssues = currentIteration 
-      ? issues.filter(issue => issue.iteration?.title === currentIteration)
-      : issues;
-      
-    return calculateVelocityMetrics(sprintIssues, timeMetrics, users);
-  }, [issues, currentIteration, timeMetrics]);
+    return calculateVelocityMetrics(issues, timeMetrics, users || []);
+  }, [issues, timeMetrics, users]);
 
   const hourMetrics = useMemo(() => {
     if (!issues.length) {
       return null;
     }
     
-    // Filter issues for current iteration ONLY - exclude milestone-based filtering
-    const sprintIssues = currentIteration 
-      ? issues.filter(issue => issue.iteration?.title === currentIteration)
-      : issues;
-      
-    return calculateHourMetrics(sprintIssues, users, timeMetrics.totalSprintDays);
-  }, [issues, users, currentIteration, timeMetrics]);
+    return calculateHourMetrics(issues, users || [], timeMetrics.totalSprintDays);
+  }, [issues, users, timeMetrics]);
 
   if (!sprintMetrics || !velocityMetrics || !hourMetrics) {
     return (
@@ -101,7 +87,7 @@ export function SprintAnalytics({
         <div>
           <h2 className="text-2xl font-bold">Sprint Analytics</h2>
           <p className="text-muted-foreground">
-            Real-time metrics for {currentIteration || 'current sprint'}
+            Real-time metrics for current sprint
           </p>
         </div>
       </div>

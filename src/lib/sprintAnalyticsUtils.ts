@@ -17,14 +17,11 @@ import {
  */
 export function calculateSprintMetrics(
   issues: GitLabIssue[], 
-  currentIteration: string | null, 
   users: GitLabUser[],
   milestone?: GitLabMilestone
 ): SprintMetrics {
-  // Filter issues for current iteration ONLY - exclude milestone-based filtering to prevent previous iteration data
-  const sprintIssues = currentIteration 
-    ? issues.filter(issue => issue.iteration?.title === currentIteration)
-    : issues;
+  // Use all issues since filtering is now handled globally
+  const sprintIssues = issues;
 
   const totalIssues = sprintIssues.length;
   const completedIssues = sprintIssues.filter(issue => issue.state === 'closed').length;
@@ -32,17 +29,17 @@ export function calculateSprintMetrics(
 
   // Get iteration data from the first issue that has it
   const currentIterationData = sprintIssues.find(issue => 
-    issue.iteration?.title === currentIteration
+    issue.iteration
   )?.iteration;
 
   // Calculate time metrics using iteration data with milestone as fallback
   const timeMetrics = calculateTimeMetrics(milestone, currentIterationData);
   
   // Calculate velocity metrics
-  const velocityMetrics = calculateVelocityMetrics(sprintIssues, timeMetrics, users);
+  const velocityMetrics = calculateVelocityMetrics(sprintIssues, timeMetrics, users || []);
   
   // Calculate hour metrics
-  const hourMetrics = calculateHourMetrics(sprintIssues, users, timeMetrics.totalSprintDays);
+  const hourMetrics = calculateHourMetrics(sprintIssues, users || [], timeMetrics.totalSprintDays);
 
   return {
     totalIssues,
@@ -66,12 +63,12 @@ export function calculateSprintCapacity(
   workingHoursPerDay: number = 8
 ) {
   console.log('🏃 [SPRINT CAPACITY] Starting calculation...', {
-    userCount: users.length,
+    userCount: users ? users.length : 0,
     sprintDuration,
     workingHoursPerDay
   });
 
-  const teamMemberCount = users.length;
+  const teamMemberCount = users ? users.length : 0;
   const dailyCapacity = teamMemberCount * workingHoursPerDay;
   const totalTeamCapacity = dailyCapacity * sprintDuration;
 
@@ -98,7 +95,7 @@ export function calculateVelocityMetrics(
     issueCount: issues.length,
     elapsedDays: timeMetrics.elapsedDays,
     remainingDays: timeMetrics.remainingDays,
-    userCount: users.length
+    userCount: users ? users.length : 0
   });
 
   const completedIssues = issues.filter(i => i.state === 'closed').length;
@@ -119,7 +116,7 @@ export function calculateVelocityMetrics(
   }
 
   // Calculate sprint capacity breakdown
-  const sprintCapacity = calculateSprintCapacity(users, timeMetrics.totalSprintDays);
+  const sprintCapacity = calculateSprintCapacity(users || [], timeMetrics.totalSprintDays);
   
   // Calculate total estimated hours for utilization
   const totalEstimatedHours = issues.reduce((sum, issue) => {
@@ -221,7 +218,7 @@ export function calculateHourMetrics(
   }, 0);
     
   // Calculate sprint capacity (8 hours per day per user)
-  const sprintCapacity = sprintDuration * 8 * users.length;
+  const sprintCapacity = sprintDuration * 8 * (users ? users.length : 0);
   
   // Calculate utilization percentage
   const utilizationPercentage = sprintCapacity > 0 

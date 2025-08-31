@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
-import { Search, Circle, User, Tag, Folder } from 'lucide-react';
+import { Search, Circle, User, Tag, Folder, Calendar } from 'lucide-react';
 import { GitLabIssue, GitLabUser } from '@/types/gitlab';
 import { useDebounce } from '@/components/PerformanceOptimizations';
 
 interface GlobalFilterSectionProps {
   issues: GitLabIssue[];
   users: GitLabUser[];
-  onFilteredDataChange: (filteredIssues: GitLabIssue[], hasActiveFilters: boolean, selectedFilters?: { assignees?: string[] }) => void;
+  onFilteredDataChange: (filteredIssues: GitLabIssue[], hasActiveFilters: boolean, selectedFilters?: { assignees?: string[], iterations?: string[] }) => void;
 }
 
 export function GlobalFilterSection({ issues, users, onFilteredDataChange }: GlobalFilterSectionProps) {
@@ -17,6 +17,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
   const [selectedAssignees, setSelectedAssignees] = React.useState<string[]>([]);
   const [selectedLabels, setSelectedLabels] = React.useState<string[]>([]);
   const [selectedProjects, setSelectedProjects] = React.useState<string[]>([]);
+  const [selectedIterations, setSelectedIterations] = React.useState<string[]>([]);
 
   // Debounce search term to prevent excessive filtering
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -48,6 +49,49 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     return Array.from(projects).sort();
   }, [issues]);
 
+  // Extract unique iterations from issues with date information
+  const allIterationsWithDates = useMemo(() => {
+    const iterations = new Map<string, { title: string; start_date?: string; due_date?: string }>();
+    issues.forEach(issue => {
+      if (issue.iteration?.title) {
+        // Store the iteration with its date information
+        iterations.set(issue.iteration.title, {
+          title: issue.iteration.title,
+          start_date: issue.iteration.start_date,
+          due_date: issue.iteration.due_date
+        });
+      }
+    });
+    return Array.from(iterations.values()).sort((a, b) => a.title.localeCompare(b.title));
+  }, [issues]);
+
+  // Extract just the iteration titles for backward compatibility
+  const allIterations = useMemo(() => {
+    return allIterationsWithDates.map(iteration => iteration.title);
+  }, [allIterationsWithDates]);
+
+  // Determine the current iteration based on date ranges
+  const currentIteration = useMemo(() => {
+    const now = new Date();
+    for (const iteration of allIterationsWithDates) {
+      if (iteration.start_date && iteration.due_date) {
+        const startDate = new Date(iteration.start_date);
+        const dueDate = new Date(iteration.due_date);
+        if (startDate <= now && dueDate >= now) {
+          return iteration.title;
+        }
+      }
+    }
+    return null;
+  }, [allIterationsWithDates]);
+
+  // Set current iteration as default when component mounts and no iterations are selected
+  React.useEffect(() => {
+    if (currentIteration && selectedIterations.length === 0) {
+      setSelectedIterations([currentIteration]);
+    }
+  }, [currentIteration, selectedIterations.length]);
+
   // Create options for filters
   const statusOptions = [
     { value: 'opened', label: 'Open' },
@@ -74,6 +118,13 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
       label: project
     }));
   }, [allProjects]);
+
+  const iterationOptions = useMemo(() => {
+    return allIterations.map(iteration => ({
+      value: iteration,
+      label: iteration
+    }));
+  }, [allIterations]);
 
   // Apply filters
   const filteredIssues = useMemo(() => {
@@ -123,16 +174,27 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
         }
       }
       
+      // Iteration filter
+      if (selectedIterations.length > 0) {
+        if (!issue.iteration?.title || !selectedIterations.includes(issue.iteration.title)) {
+          return false;
+        }
+      }
+      
       return true;
     });
-  }, [issues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects]);
+  }, [issues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations]);
 
   // Notify parent of filtered data changes
   React.useEffect(() => {
     const hasActiveFilters = !!searchTerm || selectedStatuses.length > 0 || 
-                            selectedAssignees.length > 0 || selectedLabels.length > 0 || selectedProjects.length > 0;
-    onFilteredDataChange(filteredIssues, hasActiveFilters, { assignees: selectedAssignees });
-  }, [filteredIssues, onFilteredDataChange, searchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects]);
+                            selectedAssignees.length > 0 || selectedLabels.length > 0 || 
+                            selectedProjects.length > 0 || selectedIterations.length > 0;
+    onFilteredDataChange(filteredIssues, hasActiveFilters, { 
+      assignees: selectedAssignees,
+      iterations: selectedIterations
+    });
+  }, [filteredIssues, onFilteredDataChange, searchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations]);
 
   const clearAllFilters = () => {
     setSearchTerm('');
@@ -140,10 +202,12 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     setSelectedAssignees([]);
     setSelectedLabels([]);
     setSelectedProjects([]);
+    setSelectedIterations([]);
   };
 
   const hasActiveFilters = searchTerm || selectedStatuses.length > 0 || 
-                          selectedAssignees.length > 0 || selectedLabels.length > 0 || selectedProjects.length > 0;
+                          selectedAssignees.length > 0 || selectedLabels.length > 0 || 
+                          selectedProjects.length > 0 || selectedIterations.length > 0;
 
   // Check if we should show "No issues found" messages
   const showNoAssigneeIssues = selectedAssignees.length > 0 && 
@@ -172,6 +236,11 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
       }
       return false;
     });
+
+  const showNoIterationIssues = selectedIterations.length > 0 && 
+    !issues.some(issue => 
+      selectedIterations.some(iteration => issue.iteration?.title === iteration)
+    );
 
   const showNoSearchResults = debouncedSearchTerm && filteredIssues.length === 0;
 
@@ -225,6 +294,12 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
           </div>
         )}
         
+        {showNoIterationIssues && (
+          <div className="text-sm text-muted-foreground py-2">
+            No issues found for the selected iteration(s)
+          </div>
+        )}
+        
         {showNoSearchResults && (
           <div className="text-sm text-muted-foreground py-2">
             No issues found matching "{debouncedSearchTerm}"
@@ -274,6 +349,17 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
               onChange={setSelectedProjects}
               placeholder="Project"
               icon={<Folder className="h-4 w-4" />}
+            />
+          </div>
+          
+          {/* Iteration Filter */}
+          <div className="flex-1 min-w-[150px]">
+            <SearchableMultiSelect
+              options={iterationOptions}
+              selected={selectedIterations}
+              onChange={setSelectedIterations}
+              placeholder="Iteration"
+              icon={<Calendar className="h-4 w-4" />}
             />
           </div>
         </div>

@@ -224,6 +224,7 @@ export interface UserMetrics {
   completedIssues: number;
   pendingIssues: number;
   overdueIssues: number;
+  totalEstimatedHours: number;
   completionRate: number;
   avgTimeToClose: number;
   reopenRate: number;
