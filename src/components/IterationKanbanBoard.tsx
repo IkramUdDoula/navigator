@@ -33,17 +33,75 @@ export function IterationKanbanBoard({
   // Fetch users for sprint analytics
   const { data: users = [] } = useGitLabUsers(credentials);
   
-  // Get the current iteration - find the most recent active iteration
+  // Get the current iteration - intelligently determine the most relevant current iteration
   const currentIteration = useMemo(() => {
-    // Get all unique iterations from issues
-    const iterations = issues
-      .filter(issue => issue.iteration?.title)
-      .map(issue => issue.iteration!.title)
-      .filter((title, index, array) => array.indexOf(title) === index);
-    
-    // For now, we'll take the first iteration found, or default
-    // In a real scenario, you might want to determine "current" by date or status
-    return iterations.length > 0 ? iterations[0] : null;
+    // Get all unique iterations from issues with their metadata
+    const iterationsMap = new Map<string, {
+      title: string;
+      start_date?: string;
+      due_date?: string;
+      state: string;
+      issueCount: number;
+    }>();
+
+    issues.forEach(issue => {
+      if (issue.iteration?.title) {
+        const existing = iterationsMap.get(issue.iteration.title);
+        iterationsMap.set(issue.iteration.title, {
+          title: issue.iteration.title,
+          start_date: issue.iteration.start_date,
+          due_date: issue.iteration.due_date,
+          state: issue.iteration.state,
+          issueCount: (existing?.issueCount || 0) + 1
+        });
+      }
+    });
+
+    if (iterationsMap.size === 0) {
+      return null;
+    }
+
+    const now = new Date();
+    const iterations = Array.from(iterationsMap.values());
+
+    // Priority 1: Find iteration with state 'started' that contains current date
+    const startedIterations = iterations.filter(iter => iter.state === 'started');
+    for (const iter of startedIterations) {
+      if (iter.start_date && iter.due_date) {
+        const start = new Date(iter.start_date);
+        const end = new Date(iter.due_date);
+        if (now >= start && now <= end) {
+          return iter.title;
+        }
+      }
+    }
+
+    // Priority 2: If no active iteration found, take the most recent 'started' iteration
+    if (startedIterations.length > 0) {
+      // Sort by start date descending (most recent first)
+      const mostRecentStarted = startedIterations
+        .filter(iter => iter.start_date)
+        .sort((a, b) => new Date(b.start_date!).getTime() - new Date(a.start_date!).getTime())[0];
+      
+      if (mostRecentStarted) {
+        return mostRecentStarted.title;
+      }
+    }
+
+    // Priority 3: Find iteration that contains current date (regardless of state)
+    for (const iter of iterations) {
+      if (iter.start_date && iter.due_date) {
+        const start = new Date(iter.start_date);
+        const end = new Date(iter.due_date);
+        if (now >= start && now <= end) {
+          return iter.title;
+        }
+      }
+    }
+
+    // Priority 4: Take the iteration with most issues
+    const mostPopular = iterations.sort((a, b) => b.issueCount - a.issueCount)[0];
+    return mostPopular.title;
   }, [issues]);
 
   // Get milestone data for the current iteration
@@ -77,28 +135,16 @@ export function IterationKanbanBoard({
       return [];
     }
 
-    // Filter issues for current iteration
-    const iterationIssues = issues.filter(issue => {
-      // Must be in current iteration
-      if (issue.iteration?.title !== currentIteration) {
+    // Filter issues for current iteration ONLY - exclude all other iterations
+    const allIterationIssues = issues.filter(issue => {
+      // Must have iteration data
+      if (!issue.iteration?.title) {
         return false;
       }
       
-      // Include all issues from current iteration
-      return true;
+      // Must be EXACTLY in current iteration (strict match)
+      return issue.iteration.title === currentIteration;
     });
-
-    // Add closed issues from current iteration at the end
-    const closedIterationIssues = issues.filter(issue => 
-      issue.state === 'closed' && 
-      issue.iteration?.title === currentIteration
-    );
-
-    // Combine all iteration issues
-    const allIterationIssues = [...iterationIssues, ...closedIterationIssues]
-      .filter((issue, index, array) => 
-        array.findIndex(i => i.id === issue.id) === index
-      ); // Remove duplicates
 
     // Group by resolved status or state
     const groupedByStatus: { [key: string]: GitLabIssue[] } = {};

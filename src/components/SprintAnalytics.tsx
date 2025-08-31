@@ -58,12 +58,9 @@ export function SprintAnalytics({
       return null;
     }
     
-    // Filter issues for current iteration
+    // Filter issues for current iteration ONLY - exclude milestone-based filtering
     const sprintIssues = currentIteration 
-      ? issues.filter(issue => 
-          issue.iteration?.title === currentIteration || 
-          issue.milestone?.title === currentIteration
-        )
+      ? issues.filter(issue => issue.iteration?.title === currentIteration)
       : issues;
       
     return calculateVelocityMetrics(sprintIssues, timeMetrics, users);
@@ -74,12 +71,9 @@ export function SprintAnalytics({
       return null;
     }
     
-    // Filter issues for current iteration
+    // Filter issues for current iteration ONLY - exclude milestone-based filtering
     const sprintIssues = currentIteration 
-      ? issues.filter(issue => 
-          issue.iteration?.title === currentIteration || 
-          issue.milestone?.title === currentIteration
-        )
+      ? issues.filter(issue => issue.iteration?.title === currentIteration)
       : issues;
       
     return calculateHourMetrics(sprintIssues, users, timeMetrics.totalSprintDays);

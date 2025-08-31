@@ -21,12 +21,9 @@ export function calculateSprintMetrics(
   users: GitLabUser[],
   milestone?: GitLabMilestone
 ): SprintMetrics {
-  // Filter issues for current iteration
+  // Filter issues for current iteration ONLY - exclude milestone-based filtering to prevent previous iteration data
   const sprintIssues = currentIteration 
-    ? issues.filter(issue => 
-        issue.iteration?.title === currentIteration || 
-        issue.milestone?.title === currentIteration
-      )
+    ? issues.filter(issue => issue.iteration?.title === currentIteration)
     : issues;
 
   const totalIssues = sprintIssues.length;
