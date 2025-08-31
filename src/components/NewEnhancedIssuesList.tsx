@@ -84,10 +84,14 @@ const IssueDetails = ({ issue }: { issue: GitLabIssue }) => {
 
   return (
     <div className="mt-2 p-4 bg-muted/50 rounded-lg border border-muted">
+      {/* Full issue title */}
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold">{issue.title}</h3>
+      </div>
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column - Timeline */}
         <div className="lg:col-span-2">
-          <h3 className="text-lg font-semibold mb-4">Activity Timeline</h3>
           <div className="relative">
             {/* Vertical line */}
             <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border"></div>
@@ -121,102 +125,98 @@ const IssueDetails = ({ issue }: { issue: GitLabIssue }) => {
         
         {/* Right column - Issue details */}
         <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Issue Details</h3>
-            
-            <div className="space-y-3">
-              <div className="flex items-center">
-                <Calendar className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <span className="text-xs text-muted-foreground">Created</span>
-                  <div className="font-medium text-sm">
-                    {new Date(issue.created_at).toLocaleDateString()} at {new Date(issue.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <Calendar className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+              <div>
+                <span className="text-xs text-muted-foreground">Created</span>
+                <div className="font-medium text-sm">
+                  {new Date(issue.created_at).toLocaleDateString()} at {new Date(issue.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
-              
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <span className="text-xs text-muted-foreground">Updated</span>
-                  <div className="font-medium text-sm">
-                    {new Date(issue.updated_at).toLocaleDateString()} at {new Date(issue.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center">
-                <User className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <span className="text-xs text-muted-foreground">Author</span>
-                  <div className="font-medium text-sm">
-                    {issue.author?.name || issue.author?.username || 'Unknown'}
-                  </div>
-                </div>
-              </div>
-              
-              {issue.assignees && issue.assignees.length > 0 && (
-                <div className="flex items-start">
-                  <User className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <span className="text-xs text-muted-foreground">Assignee{issue.assignees.length > 1 ? 's' : ''}</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {issue.assignees.map((assignee, index) => (
-                        <div key={index} className="flex items-center bg-background rounded-full pl-1 pr-2 py-0.5 border">
-                          <Avatar className="h-5 w-5 mr-1">
-                            {assignee.avatar_url ? (
-                              <AvatarImage src={assignee.avatar_url} />
-                            ) : (
-                              <AvatarFallback className="text-xs">
-                                {assignee.name?.charAt(0) || assignee.username?.charAt(0) || 'U'}
-                              </AvatarFallback>
-                            )}
-                          </Avatar>
-                          <span className="text-xs">{assignee.name || assignee.username}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {issue.labels && issue.labels.length > 0 && (
-                <div className="flex items-start">
-                  <Tag className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <span className="text-xs text-muted-foreground">Labels</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {issue.labels.map((label, index) => (
-                        <div key={index} className="inline-flex items-center rounded-full border border-black px-2.5 py-0.5 text-xs font-medium">
-                          {label}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {(issue.parent || issue.epic) && (
-                <div className="flex items-start">
-                  <Link className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <span className="text-xs text-muted-foreground">Linked Issues</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {issue.parent && (
-                        <div className="inline-flex items-center rounded-full border border-black px-2.5 py-0.5 text-xs font-medium">
-                          Parent: {issue.parent.title}
-                        </div>
-                      )}
-                      {issue.epic && (
-                        <div className="inline-flex items-center rounded-full border border-black px-2.5 py-0.5 text-xs font-medium">
-                          Epic: {issue.epic.title}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
+            
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+              <div>
+                <span className="text-xs text-muted-foreground">Updated</span>
+                <div className="font-medium text-sm">
+                  {new Date(issue.updated_at).toLocaleDateString()} at {new Date(issue.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center">
+              <User className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+              <div>
+                <span className="text-xs text-muted-foreground">Author</span>
+                <div className="font-medium text-sm">
+                  {issue.author?.name || issue.author?.username || 'Unknown'}
+                </div>
+              </div>
+            </div>
+            
+            {issue.assignees && issue.assignees.length > 0 && (
+              <div className="flex items-start">
+                <User className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
+                <div>
+                  <span className="text-xs text-muted-foreground">Assignee{issue.assignees.length > 1 ? 's' : ''}</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {issue.assignees.map((assignee, index) => (
+                      <div key={index} className="flex items-center bg-background rounded-full pl-1 pr-2 py-0.5 border">
+                        <Avatar className="h-5 w-5 mr-1">
+                          {assignee.avatar_url ? (
+                            <AvatarImage src={assignee.avatar_url} />
+                          ) : (
+                            <AvatarFallback className="text-xs">
+                              {assignee.name?.charAt(0) || assignee.username?.charAt(0) || 'U'}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <span className="text-xs">{assignee.name || assignee.username}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {issue.labels && issue.labels.length > 0 && (
+              <div className="flex items-start">
+                <Tag className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
+                <div>
+                  <span className="text-xs text-muted-foreground">Labels</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {issue.labels.map((label, index) => (
+                      <div key={index} className="inline-flex items-center rounded-full border border-black px-2.5 py-0.5 text-xs font-medium">
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {(issue.parent || issue.epic) && (
+              <div className="flex items-start">
+                <Link className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
+                <div>
+                  <span className="text-xs text-muted-foreground">Linked Issues</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {issue.parent && (
+                      <div className="inline-flex items-center rounded-full border border-black px-2.5 py-0.5 text-xs font-medium">
+                        Parent: {issue.parent.title}
+                      </div>
+                    )}
+                    {issue.epic && (
+                      <div className="inline-flex items-center rounded-full border border-black px-2.5 py-0.5 text-xs font-medium">
+                        Epic: {issue.epic.title}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           
           {issue.description && (
