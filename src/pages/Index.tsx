@@ -27,14 +27,6 @@ const Index = () => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
-  // Update credentials when group path changes
-  useEffect(() => {
-    if (credentials && groupPath !== credentials.groupId) {
-      const updatedCredentials = { ...credentials, groupId: groupPath };
-      setCredentials(updatedCredentials);
-    }
-  }, [groupPath, credentials, setCredentials]);
-
   const currentCredentials = credentials ? { ...credentials, groupId: groupPath } : null;
 
   // Fetch issues with enhanced status resolution
@@ -186,7 +178,6 @@ const Index = () => {
         theme={theme}
         onThemeToggle={handleThemeToggle}
         groupPath={groupPath}
-        onGroupPathChange={setGroupPath}
       />
       
       <GlobalFilterSection 

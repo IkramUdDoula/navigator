@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { LogOut, Moon, Sun } from 'lucide-react';
 import { GitLabCredentials } from '@/types/gitlab';
 
@@ -9,7 +8,6 @@ interface HeaderProps {
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
   groupPath: string;
-  onGroupPathChange: (path: string) => void;
 }
 
 export function Header({ 
@@ -17,8 +15,7 @@ export function Header({
   onLogout, 
   theme,
   onThemeToggle,
-  groupPath,
-  onGroupPathChange
+  groupPath
 }: HeaderProps) {
   return (
     <header className="border-b bg-background">
@@ -27,17 +24,7 @@ export function Header({
           <h1 className="text-xl font-bold">Navigator</h1>
         </div>
         
-        <div className="flex-1 flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Group ID or Path:</span>
-            <Input
-              value={groupPath}
-              onChange={(e) => onGroupPathChange(e.target.value)}
-              placeholder="devsel"
-              className="w-40"
-            />
-          </div>
-        </div>
+        <div className="flex-1"></div>
         
         <div className="flex items-center gap-2">
           <Button
