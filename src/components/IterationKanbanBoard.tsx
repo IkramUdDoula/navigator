@@ -180,21 +180,6 @@ export function IterationKanbanBoard({
       />
 
       <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">
-              {currentIteration || 'No Active Iteration'}
-            </h2>
-            <p className="text-muted-foreground">
-              {totalIssues} {totalIssues === 1 ? 'issue' : 'issues'}
-            </p>
-          </div>
-          <Badge variant="outline" className="text-lg px-3 py-1">
-            Kanban Board
-          </Badge>
-        </div>
-
       {/* Kanban Board */}
       <div className="flex gap-4 min-h-[500px] w-full">
         {statusColumns.map((column) => (
