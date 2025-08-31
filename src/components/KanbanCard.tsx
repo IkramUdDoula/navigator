@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Clock, User } from 'lucide-react';
 import { GitLabIssue } from '@/types/gitlab';
@@ -46,7 +45,7 @@ export function KanbanCard({ issue, onClick, className, borderColor }: KanbanCar
     >
       <CardContent className="p-3 space-y-2">
         {/* First line - Issue iid */}
-        <div className="text-xs font-mono text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           #{issue.iid}
         </div>
         
@@ -79,29 +78,16 @@ export function KanbanCard({ issue, onClick, className, borderColor }: KanbanCar
           )}
         </div>
         
-        {/* Fourth line - All labels */}
+        {/* Fourth line - All labels as comma-separated text */}
         {issue.labels.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {issue.labels.slice(0, 3).map((label) => (
-              <Badge 
-                key={label} 
-                variant="outline" 
-                className="text-xs px-1 py-0 h-5"
-              >
-                {label.replace('Status::', '')}
-              </Badge>
-            ))}
-            {issue.labels.length > 3 && (
-              <Badge variant="outline" className="text-xs px-1 py-0 h-5">
-                +{issue.labels.length - 3}
-              </Badge>
-            )}
+          <div className="text-xs text-muted-foreground line-clamp-2">
+            {issue.labels.map(label => label.replace('Status::', '')).join(', ')}
           </div>
         )}
         
         {/* Fifth line - Estimated time */}
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock className="w-3 h-3" />
+          <Clock className="w-3 h-3 text-muted-foreground" />
           <span>{formatEstimatedTime(estimatedTime)}</span>
         </div>
       </CardContent>
