@@ -9,7 +9,7 @@ import { TeamTab } from '@/components/TeamTab';
 import { GlobalFilterSection } from '@/components/GlobalFilterSection';
 
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useGitLabIssues, useGitLabUsers } from '@/hooks/useGitLabAPI';
+import { useGitLabIssuesWithEnhancedStatus, useGitLabUsers } from '@/hooks/useGitLabAPI';
 import { GitLabCredentials, GitLabIssue } from '@/types/gitlab';
 
 const Index = () => {
@@ -37,8 +37,8 @@ const Index = () => {
 
   const currentCredentials = credentials ? { ...credentials, groupId: groupPath } : null;
 
-  // Fetch issues without filters
-  const { data: issues = [], isLoading: issuesLoading, refetch: refetchIssues } = useGitLabIssues(currentCredentials);
+  // Fetch issues with enhanced status resolution
+  const { data: issues = [], isLoading: issuesLoading, refetch: refetchIssues } = useGitLabIssuesWithEnhancedStatus(currentCredentials);
   const { data: users = [], isLoading: usersLoading } = useGitLabUsers(currentCredentials);
 
   const handleCredentialsSubmit = (newCredentials: GitLabCredentials) => {

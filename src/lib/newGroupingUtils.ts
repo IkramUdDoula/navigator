@@ -1,4 +1,5 @@
 import { GitLabIssue } from '@/types/gitlab';
+import { StatusResolutionService } from './statusResolutionService';
 
 // Define the grouping categories
 export type GroupingCategory = 'iteration' | 'assignee' | 'status' | 'epic';
@@ -123,7 +124,13 @@ function getGroupName(issue: GitLabIssue, category: GroupingCategory): string {
         ? issue.assignees[0].name 
         : 'Unassigned';
     case 'status':
-      return issue.state || 'Unknown';
+      // Use enhanced status resolution
+      if (issue.resolved_status) {
+        return issue.resolved_status.name;
+      }
+      // Fallback to basic resolution if resolved_status is not available
+      const resolvedStatus = StatusResolutionService.resolveIssueStatus(issue);
+      return resolvedStatus.name;
     case 'epic':
       // Implementation for epic/parent grouping
       if (issue.epic) {

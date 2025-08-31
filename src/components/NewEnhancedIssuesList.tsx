@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ExternalLink, ChevronRight, ChevronDown, Calendar, User, Tag, Link, Clock, MessageSquare, FileText, PlusCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import StatusBadge from '@/components/StatusBadge';
 import {
   Pagination,
   PaginationContent,
@@ -443,9 +444,12 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
                       <TableCell className="font-medium">#{issue.iid}</TableCell>
                       <TableCell className="max-w-xs truncate">{issue.title}</TableCell>
                       <TableCell>
-                        <Badge variant={issue.state === 'opened' ? 'default' : 'secondary'}>
-                          {issue.state}
-                        </Badge>
+                        <StatusBadge 
+                          status={issue.resolved_status?.name || issue.state}
+                          variant={issue.resolved_status?.source === 'label' ? 'status' : 
+                                   issue.state === 'closed' ? 'closed' : 'opened'}
+                          color={issue.resolved_status?.color}
+                        />
                       </TableCell>
                       <TableCell>
                         {issue.assignees && issue.assignees.length > 0 ? (
@@ -656,9 +660,12 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
                         <TableCell className="font-medium">#{issue.iid}</TableCell>
                         <TableCell className="max-w-xs truncate">{issue.title}</TableCell>
                         <TableCell>
-                          <Badge variant={issue.state === 'opened' ? 'default' : 'secondary'}>
-                            {issue.state}
-                          </Badge>
+                          <StatusBadge 
+                            status={issue.resolved_status?.name || issue.state}
+                            variant={issue.resolved_status?.source === 'label' ? 'status' : 
+                                     issue.state === 'closed' ? 'closed' : 'opened'}
+                            color={issue.resolved_status?.color}
+                          />
                         </TableCell>
                         <TableCell>
                           {issue.assignees && issue.assignees.length > 0 ? (

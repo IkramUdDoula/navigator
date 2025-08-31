@@ -39,6 +39,8 @@ export interface GitLabIssue {
     title: string;
     iid?: number;
   };
+  // Enhanced status field
+  resolved_status?: ResolvedStatus;
 }
 
 export interface GitLabUser {
@@ -70,6 +72,36 @@ export interface GitLabBoardList {
     color: string;
   } | null;
   position: number;
+}
+
+// Enhanced Status Resolution Types
+export interface ResolvedStatus {
+  name: string;
+  source: 'label' | 'state';
+  category: 'opened' | 'closed';
+  color?: string;
+  originalLabel?: string;
+}
+
+export interface GitLabLabel {
+  id: string;
+  title: string;
+  color: string;
+  description: string;
+  text_color?: string;
+}
+
+export interface StatusLabelData {
+  statusLabels: GitLabLabel[];
+  colorMapping: Record<string, string>;
+}
+
+// Status Badge Props Interface
+export interface StatusBadgeProps {
+  status: string;
+  variant: 'opened' | 'closed' | 'status';
+  color?: string;
+  className?: string;
 }
 
 // Grouping data structures
