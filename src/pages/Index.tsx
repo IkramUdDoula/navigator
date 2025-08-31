@@ -5,6 +5,7 @@ import { Header } from '@/components/Header';
 import { TabNavigation, TabType } from '@/components/TabNavigation';
 import { NewEnhancedIssuesList } from '@/components/NewEnhancedIssuesList';
 import { TeamTab } from '@/components/TeamTab';
+import { IterationKanbanBoard } from '@/components/IterationKanbanBoard';
 
 import { GlobalFilterSection } from '@/components/GlobalFilterSection';
 
@@ -88,6 +89,16 @@ const Index = () => {
           isLoading={issuesLoading || usersLoading} 
           selectedAssignees={selectedAssignees} // Pass selected assignees
         />;
+        
+      case 'iteration':
+        return <IterationKanbanBoard 
+          issues={issuesToShow}
+          onIssueClick={(issue) => {
+            // Open issue URL in new tab
+            window.open(issue.web_url, '_blank');
+          }}
+        />;
+        
       default:
         return null;
     }

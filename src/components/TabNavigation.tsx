@@ -1,7 +1,7 @@
-import { List, Users } from 'lucide-react';
+import { List, Users, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export type TabType = 'issues' | 'team';
+export type TabType = 'issues' | 'team' | 'iteration';
 
 interface TabNavigationProps {
   activeTab: TabType;
@@ -13,6 +13,7 @@ export function TabNavigation({ activeTab, onTabChange, issueCount }: TabNavigat
   const tabs = [
     { id: 'issues' as const, label: 'Issues', icon: List },
     { id: 'team' as const, label: 'Team', icon: Users },
+    { id: 'iteration' as const, label: 'Current Iteration', icon: Calendar },
   ];
 
   return (
