@@ -5,7 +5,7 @@ import StatusBadge from '@/components/StatusBadge';
 
 describe('StatusBadge', () => {
   it('should render with status text', () => {
-    render(<StatusBadge status=\"In Progress\" variant=\"status\" />);
+    render(<StatusBadge status="In Progress" variant="status" />);
     
     expect(screen.getByText('In Progress')).toBeInTheDocument();
   });
@@ -13,9 +13,9 @@ describe('StatusBadge', () => {
   it('should render with custom color for status labels', () => {
     render(
       <StatusBadge 
-        status=\"In Progress\" 
-        variant=\"status\" 
-        color=\"#ff6b6b\" 
+        status="In Progress" 
+        variant="status" 
+        color="#ff6b6b" 
       />
     );
     
@@ -27,9 +27,9 @@ describe('StatusBadge', () => {
     // Dark background should have white text
     render(
       <StatusBadge 
-        status=\"Dark Status\" 
-        variant=\"status\" 
-        color=\"#000000\" 
+        status="Dark Status" 
+        variant="status" 
+        color="#000000" 
       />
     );
     
@@ -41,9 +41,9 @@ describe('StatusBadge', () => {
     // Light background should have black text
     render(
       <StatusBadge 
-        status=\"Light Status\" 
-        variant=\"status\" 
-        color=\"#ffffff\" 
+        status="Light Status" 
+        variant="status" 
+        color="#ffffff" 
       />
     );
     
@@ -52,7 +52,7 @@ describe('StatusBadge', () => {
   });
   
   it('should render with default styling for status without color', () => {
-    render(<StatusBadge status=\"No Color\" variant=\"status\" />);
+    render(<StatusBadge status="No Color" variant="status" />);
     
     const badge = screen.getByText('No Color');
     expect(badge).toHaveClass('badge');
@@ -60,14 +60,14 @@ describe('StatusBadge', () => {
   });
   
   it('should render with secondary variant for closed status', () => {
-    render(<StatusBadge status=\"Closed\" variant=\"closed\" />);
+    render(<StatusBadge status="Closed" variant="closed" />);
     
     const badge = screen.getByText('Closed');
     expect(badge).toHaveClass('badge');
   });
   
-  it('should render with default variant for opened status', () => {
-    render(<StatusBadge status=\"Opened\" variant=\"opened\" />);
+  it('should render with secondary variant for opened status', () => {
+    render(<StatusBadge status="Opened" variant="opened" />);
     
     const badge = screen.getByText('Opened');
     expect(badge).toHaveClass('badge');
@@ -76,9 +76,9 @@ describe('StatusBadge', () => {
   it('should normalize hex colors without # prefix', () => {
     render(
       <StatusBadge 
-        status=\"Hex Test\" 
-        variant=\"status\" 
-        color=\"ff6b6b\" 
+        status="Hex Test" 
+        variant="status" 
+        color="ff6b6b" 
       />
     );
     
@@ -89,9 +89,9 @@ describe('StatusBadge', () => {
   it('should handle named colors', () => {
     render(
       <StatusBadge 
-        status=\"Named Color\" 
-        variant=\"status\" 
-        color=\"blue\" 
+        status="Named Color" 
+        variant="status" 
+        color="blue" 
       />
     );
     
@@ -102,9 +102,9 @@ describe('StatusBadge', () => {
   it('should ignore invalid color formats', () => {
     render(
       <StatusBadge 
-        status=\"Invalid Color\" 
-        variant=\"status\" 
-        color=\"invalid-color\" 
+        status="Invalid Color" 
+        variant="status" 
+        color="invalid-color" 
       />
     );
     
@@ -115,9 +115,9 @@ describe('StatusBadge', () => {
   it('should apply custom className', () => {
     render(
       <StatusBadge 
-        status=\"Custom Class\" 
-        variant=\"status\" 
-        className=\"custom-badge-class\" 
+        status="Custom Class" 
+        variant="status" 
+        className="custom-badge-class" 
       />
     );
     
@@ -128,8 +128,8 @@ describe('StatusBadge', () => {
   it('should handle empty or undefined color', () => {
     render(
       <StatusBadge 
-        status=\"No Color Prop\" 
-        variant=\"status\" 
+        status="No Color Prop" 
+        variant="status" 
         color={undefined} 
       />
     );
@@ -142,9 +142,9 @@ describe('StatusBadge', () => {
     // Test short hex (should be ignored)
     render(
       <StatusBadge 
-        status=\"Short Hex\" 
-        variant=\"status\" 
-        color=\"#fff\" 
+        status="Short Hex" 
+        variant="status" 
+        color="#fff" 
       />
     );
     
@@ -153,7 +153,7 @@ describe('StatusBadge', () => {
   });
   
   it('should maintain font styling classes', () => {
-    render(<StatusBadge status=\"Font Test\" variant=\"status\" />);
+    render(<StatusBadge status="Font Test" variant="status" />);
     
     const badge = screen.getByText('Font Test');
     expect(badge).toHaveClass('font-medium', 'text-xs');
@@ -163,9 +163,9 @@ describe('StatusBadge', () => {
     it('should use white text for dark red background', () => {
       render(
         <StatusBadge 
-          status=\"Dark Red\" 
-          variant=\"status\" 
-          color=\"#8B0000\" 
+          status="Dark Red" 
+          variant="status" 
+          color="#8B0000" 
         />
       );
       
@@ -176,14 +176,27 @@ describe('StatusBadge', () => {
     it('should use black text for light yellow background', () => {
       render(
         <StatusBadge 
-          status=\"Light Yellow\" 
-          variant=\"status\" 
-          color=\"#FFFF99\" 
+          status="Light Yellow" 
+          variant="status" 
+          color="#FFFF99" 
         />
       );
       
       const badge = screen.getByText('Light Yellow');
       expect(badge).toHaveStyle({ color: '#000000' });
+    });
+    
+    it('should use white text for medium brightness colors due to adjusted threshold', () => {
+      render(
+        <StatusBadge 
+          status="Medium Blue" 
+          variant="status" 
+          color="#4dabf7" 
+        />
+      );
+      
+      const badge = screen.getByText('Medium Blue');
+      expect(badge).toHaveStyle({ color: '#ffffff' });
     });
   });
   
@@ -201,7 +214,7 @@ describe('StatusBadge', () => {
         render(
           <StatusBadge 
             status={`${name} status`} 
-            variant=\"status\" 
+            variant="status" 
             color={name} 
           />
         );
@@ -211,4 +224,4 @@ describe('StatusBadge', () => {
       });
     });
   });
-});"
+});

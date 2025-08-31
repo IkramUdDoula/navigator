@@ -17,10 +17,11 @@ const getContrastColor = (hexColor: string): string => {
   const g = parseInt(color.slice(2, 4), 16);
   const b = parseInt(color.slice(4, 6), 16);
   
-  // Calculate relative luminance
+  // Calculate relative luminance using WCAG formula
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   
-  return luminance > 0.5 ? '#000000' : '#ffffff';
+  // Use a slightly lower threshold for better readability in dark mode
+  return luminance > 0.4 ? '#000000' : '#ffffff';
 };
 
 /**
@@ -76,26 +77,28 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     switch (variant) {
       case 'status':
         if (normalizedColor) {
-          // Custom color for status labels
+          // Custom color for status labels with improved dark mode support
           const textColor = getContrastColor(normalizedColor);
           return {
             variant: 'outline' as const,
             style: {
               backgroundColor: normalizedColor,
               color: textColor,
-              borderColor: normalizedColor
+              borderColor: normalizedColor,
+              // Add text shadow for better readability
+              textShadow: textColor === '#ffffff' ? '0 1px 2px rgba(0,0,0,0.5)' : '0 1px 2px rgba(255,255,255,0.5)'
             }
           };
         }
-        // Fallback for status without color
-        return { variant: 'default' as const };
+        // Fallback for status without color - use secondary for better dark mode visibility
+        return { variant: 'secondary' as const };
         
       case 'closed':
         return { variant: 'secondary' as const };
         
       case 'opened':
       default:
-        return { variant: 'default' as const };
+        return { variant: 'secondary' as const };
     }
   };
   
@@ -105,7 +108,13 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     <Badge 
       variant={badgeProps.variant}
       style={badgeProps.style}
-      className={cn('font-medium text-xs', className)}
+      className={cn(
+        'font-medium text-xs',
+        // Ensure visibility in dark mode for badges without custom colors
+        !normalizedColor && variant === 'status' && 'dark:bg-muted dark:text-muted-foreground dark:border-muted-foreground/50',
+        !normalizedColor && variant === 'opened' && 'dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-600/50',
+        className
+      )}
     >
       {status}
     </Badge>

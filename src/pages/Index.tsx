@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { AuthForm } from '@/components/AuthForm';
 import { Header } from '@/components/Header';
 import { TabNavigation, TabType } from '@/components/TabNavigation';
@@ -14,7 +13,6 @@ import { useGitLabIssuesWithEnhancedStatus, useGitLabUsers } from '@/hooks/useGi
 import { GitLabCredentials, GitLabIssue } from '@/types/gitlab';
 
 const Index = () => {
-  const queryClient = useQueryClient();
   const [credentials, setCredentials] = useLocalStorage<GitLabCredentials | null>('gitlab-credentials', null);
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
   const [activeTab, setActiveTab] = useState<TabType>('issues');
@@ -39,7 +37,7 @@ const Index = () => {
   const currentCredentials = credentials ? { ...credentials, groupId: groupPath } : null;
 
   // Fetch issues with enhanced status resolution
-  const { data: issues = [], isLoading: issuesLoading, refetch: refetchIssues } = useGitLabIssuesWithEnhancedStatus(currentCredentials);
+  const { data: issues = [], isLoading: issuesLoading } = useGitLabIssuesWithEnhancedStatus(currentCredentials);
   const { data: users = [], isLoading: usersLoading } = useGitLabUsers(currentCredentials);
 
   const handleCredentialsSubmit = (newCredentials: GitLabCredentials) => {
@@ -49,12 +47,6 @@ const Index = () => {
 
   const handleLogout = () => {
     setCredentials(null);
-    queryClient.clear();
-  };
-
-  const handleRefresh = () => {
-    refetchIssues();
-    queryClient.invalidateQueries();
   };
 
   const handleThemeToggle = () => {
@@ -109,8 +101,6 @@ const Index = () => {
       <Header 
         credentials={credentials}
         onLogout={handleLogout}
-        onRefresh={handleRefresh}
-        isLoading={issuesLoading || usersLoading}
         theme={theme}
         onThemeToggle={handleThemeToggle}
         groupPath={groupPath}

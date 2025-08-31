@@ -1,13 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { RefreshCw, LogOut, Moon, Sun } from 'lucide-react';
+import { LogOut, Moon, Sun } from 'lucide-react';
 import { GitLabCredentials } from '@/types/gitlab';
 
 interface HeaderProps {
   credentials: GitLabCredentials;
   onLogout: () => void;
-  onRefresh: () => void;
-  isLoading?: boolean;
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
   groupPath: string;
@@ -17,8 +15,6 @@ interface HeaderProps {
 export function Header({ 
   credentials, 
   onLogout, 
-  onRefresh, 
-  isLoading,
   theme,
   onThemeToggle,
   groupPath,
@@ -50,15 +46,6 @@ export function Header({
             onClick={onThemeToggle}
           >
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
           
           <Button variant="ghost" size="icon" onClick={onLogout}>
