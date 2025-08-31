@@ -74,6 +74,3 @@ src/
 - React Query
 - React Router
 
-## Deployment
-
-Deploy easily with Lovable by clicking "Share -> Publish" in the Lovable dashboard.
