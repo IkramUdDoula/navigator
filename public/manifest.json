@@ -1,6 +1,6 @@
 {
-  "short_name": "GitLab Lens",
-  "name": "GitLab Lens - Enhanced UI",
+  "short_name": "Navigator",
+  "name": "Navigator - Enhanced UI",
   "description": "Enhanced UI for GitLab with issue tracking and team management",
   "icons": [
     {

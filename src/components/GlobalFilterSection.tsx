@@ -71,6 +71,20 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     return allIterationsWithDates.map(iteration => iteration.title);
   }, [allIterationsWithDates]);
 
+  // Create iteration options including the "Backlog" option
+  const iterationOptions = useMemo(() => {
+    // Add "Backlog" as a special option for issues with no iteration
+    const options = allIterations.map(iteration => ({
+      value: iteration,
+      label: iteration
+    }));
+    
+    // Add Backlog option at the beginning
+    options.unshift({ value: 'Backlog', label: 'Backlog' });
+    
+    return options;
+  }, [allIterations]);
+
   // Determine the current iteration based on date ranges
   const currentIteration = useMemo(() => {
     const now = new Date();
@@ -119,13 +133,6 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
       label: project
     }));
   }, [allProjects]);
-
-  const iterationOptions = useMemo(() => {
-    return allIterations.map(iteration => ({
-      value: iteration,
-      label: iteration
-    }));
-  }, [allIterations]);
 
   // Apply filters
   const filteredIssues = useMemo(() => {
@@ -177,8 +184,22 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
       
       // Iteration filter
       if (selectedIterations.length > 0) {
-        if (!issue.iteration?.title || !selectedIterations.includes(issue.iteration.title)) {
-          return false;
+        // Handle special "Backlog" case - issues with no iteration assigned that are open
+        if (selectedIterations.includes('Backlog')) {
+          // If "Backlog" is selected, include issues that either:
+          // 1. Have no iteration and are open (backlog items), OR
+          // 2. Match any of the other selected iterations
+          const isBacklogItem = !issue.iteration?.title && issue.state === 'opened';
+          const matchesOtherIterations = issue.iteration?.title && selectedIterations.includes(issue.iteration.title);
+          
+          if (!isBacklogItem && !matchesOtherIterations) {
+            return false;
+          }
+        } else {
+          // Normal iteration filtering - only include issues that match selected iterations
+          if (!issue.iteration?.title || !selectedIterations.includes(issue.iteration.title)) {
+            return false;
+          }
         }
       }
       
@@ -239,9 +260,15 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     });
 
   const showNoIterationIssues = selectedIterations.length > 0 && 
-    !issues.some(issue => 
-      selectedIterations.some(iteration => issue.iteration?.title === iteration)
-    );
+    !issues.some(issue => {
+      if (selectedIterations.includes('Backlog')) {
+        // For backlog, check if there are issues with no iteration that are open
+        const isBacklogItem = !issue.iteration?.title && issue.state === 'opened';
+        const matchesOtherIterations = issue.iteration?.title && selectedIterations.includes(issue.iteration.title);
+        return isBacklogItem || matchesOtherIterations;
+      }
+      return selectedIterations.some(iteration => issue.iteration?.title === iteration);
+    });
 
   const showNoSearchResults = debouncedSearchTerm && filteredIssues.length === 0;
 
