@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
-import { LogOut, Moon, Sun } from 'lucide-react';
+import { LogOut, Moon, Sun, Settings } from 'lucide-react';
 import { GitLabCredentials } from '@/types/gitlab';
+import { useState } from 'react';
+import { SettingsDialog } from '@/components/SettingsDialog';
 
 interface HeaderProps {
   credentials: GitLabCredentials;
@@ -8,6 +10,7 @@ interface HeaderProps {
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
   groupPath: string;
+  allLabels: string[];
 }
 
 export function Header({ 
@@ -15,8 +18,11 @@ export function Header({
   onLogout, 
   theme,
   onThemeToggle,
-  groupPath
+  groupPath,
+  allLabels
 }: HeaderProps) {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
   return (
     <header className="border-b bg-background">
       <div className="flex h-16 items-center px-6 gap-6">
@@ -35,11 +41,25 @@ export function Header({
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
           
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSettingsOpen(true)}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+          
           <Button variant="ghost" size="icon" onClick={onLogout}>
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </div>
+      
+      <SettingsDialog 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+        allLabels={allLabels}
+      />
     </header>
   );
 }

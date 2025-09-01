@@ -58,6 +58,15 @@ const Index = () => {
   const { data: issues = [], isLoading: issuesLoading, refetch: refetchIssues } = useGitLabIssuesWithEnhancedStatus(currentCredentials);
   const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useGitLabUsers(currentCredentials);
 
+  // Extract unique labels from issues
+  const allLabels = useMemo(() => {
+    const labels = new Set<string>();
+    issues.forEach(issue => {
+      issue.labels.forEach(label => labels.add(label));
+    });
+    return Array.from(labels).sort();
+  }, [issues]);
+
   // Determine the current iteration based on the logic from IterationKanbanBoard
   const defaultIteration = useMemo(() => {
     // Get all unique iterations from issues with their metadata
@@ -203,6 +212,7 @@ const Index = () => {
         theme={theme}
         onThemeToggle={handleThemeToggle}
         groupPath={groupPath}
+        allLabels={allLabels}
       />
       
       <GlobalFilterSection 

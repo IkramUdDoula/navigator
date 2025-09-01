@@ -1,15 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Clock, User, Tag } from 'lucide-react';
 import { GitLabIssue } from '@/types/gitlab';
 import { cn } from '@/lib/utils';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 interface KanbanCardProps {
   issue: GitLabIssue;
   onClick?: (issue: GitLabIssue) => void;
   className?: string;
-  borderColor?: string;
 }
 
 const formatEstimatedTime = (timeEstimate: number): string => {
@@ -24,7 +24,29 @@ const formatEstimatedTime = (timeEstimate: number): string => {
   return `${minutes}m`;
 };
 
-export function KanbanCard({ issue, onClick, className, borderColor }: KanbanCardProps) {
+export function KanbanCard({ issue, onClick, className }: KanbanCardProps) {
+  const [labelColors] = useLocalStorage<Record<string, string>>('label-colors', {});
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const defaultColor = '#6c757d'; // Gray color as default
+
+  // Listen for label color updates
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'label-colors-last-updated') {
+        setLastUpdated(e.newValue);
+      }
+    };
+
+    // Check for initial update timestamp
+    const initialTimestamp = localStorage.getItem('label-colors-last-updated');
+    if (initialTimestamp) {
+      setLastUpdated(initialTimestamp);
+    }
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const handleClick = () => {
     if (onClick) {
       onClick(issue);
@@ -34,6 +56,11 @@ export function KanbanCard({ issue, onClick, className, borderColor }: KanbanCar
   const estimatedTime = issue.time_stats?.time_estimate || 0;
   const primaryAssignee = issue.assignees?.[0];
   
+  // Get the first label's color for the border, or use default
+  const borderColor = issue.labels.length > 0 ? 
+    (labelColors[issue.labels[0]] || defaultColor) : 
+    undefined;
+
   return (
     <Card 
       className={cn(
@@ -44,7 +71,7 @@ export function KanbanCard({ issue, onClick, className, borderColor }: KanbanCar
       style={borderColor ? { borderLeftColor: borderColor } : undefined}
     >
       <CardContent className="p-3 space-y-2">
-        {/* First line - Issue iid */}
+        {/* First line - Issue iid */}}
         <div className="text-xs text-muted-foreground">
           #{issue.iid}
         </div>
