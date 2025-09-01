@@ -71,7 +71,7 @@ export function KanbanCard({ issue, onClick, className }: KanbanCardProps) {
       style={borderColor ? { borderLeftColor: borderColor } : undefined}
     >
       <CardContent className="p-3 space-y-2">
-        {/* First line - Issue iid */}}
+        {/* First line - Issue iid */}
         <div className="text-xs text-muted-foreground">
           #{issue.iid}
         </div>
