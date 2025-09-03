@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { AuthForm } from '@/components/AuthForm';
 import { Header } from '@/components/Header';
 import { TabNavigation, TabType } from '@/components/TabNavigation';
@@ -158,7 +158,7 @@ const Index = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
-  const handleFilteredDataChange = (newFilteredIssues: GitLabIssue[], activeFilters: boolean, selectedFilters?: { assignees?: string[], iterations?: string[] }) => {
+  const handleFilteredDataChange = useCallback((newFilteredIssues: GitLabIssue[], activeFilters: boolean, selectedFilters?: { assignees?: string[], iterations?: string[] }) => {
     setFilteredIssues(newFilteredIssues);
     setHasActiveFilters(activeFilters);
     if (selectedFilters?.assignees) {
@@ -167,7 +167,7 @@ const Index = () => {
     if (selectedFilters?.iterations) {
       setSelectedIterations(selectedFilters.iterations);
     }
-  };
+  }, []);
 
   if (!credentials) {
     return <AuthForm onCredentialsSubmit={handleCredentialsSubmit} />;
@@ -213,6 +213,8 @@ const Index = () => {
         onThemeToggle={handleThemeToggle}
         groupPath={groupPath}
         allLabels={allLabels}
+        currentIteration={defaultIteration}
+        issues={issues}
       />
       
       <GlobalFilterSection 

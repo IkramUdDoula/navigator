@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { GitLabIssue } from '@/types/gitlab';
 import { groupIssues, GroupingCategory, GroupedIssues, getGroupMetadata } from '@/lib/newGroupingUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -432,9 +432,8 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
                 const isExpanded = expandedIssues.has(issue.id);
                 
                 return (
-                  <>
+                  <React.Fragment key={issue.id}>
                     <TableRow 
-                      key={issue.id} 
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() => toggleIssue(issue.id)}
                     >
@@ -491,7 +490,7 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
               
@@ -648,9 +647,8 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
                   const isExpanded = expandedIssues.has(issue.id);
                   
                   return (
-                    <>
+                    <React.Fragment key={issue.id}>
                       <TableRow 
-                        key={issue.id} 
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => toggleIssue(issue.id)}
                       >
@@ -707,7 +705,7 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })}
                 

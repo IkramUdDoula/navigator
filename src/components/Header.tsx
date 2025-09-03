@@ -1,8 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { LogOut, Moon, Sun, Settings } from 'lucide-react';
-import { GitLabCredentials } from '@/types/gitlab';
+import { GitLabCredentials, GitLabIssue } from '@/types/gitlab';
 import { useState } from 'react';
 import { SettingsDialog } from '@/components/SettingsDialog';
+import { CreateIssueButton } from '@/components/CreateIssueButton';
 
 interface HeaderProps {
   credentials: GitLabCredentials;
@@ -11,6 +12,8 @@ interface HeaderProps {
   onThemeToggle: () => void;
   groupPath: string;
   allLabels: string[];
+  currentIteration?: string | null;
+  issues?: GitLabIssue[];
 }
 
 export function Header({ 
@@ -19,15 +22,22 @@ export function Header({
   theme,
   onThemeToggle,
   groupPath,
-  allLabels
+  allLabels,
+  currentIteration,
+  issues
 }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
     <header className="border-b bg-background">
       <div className="flex h-16 items-center px-6 gap-6">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold">Navigator</h1>
+          <CreateIssueButton 
+            credentials={credentials}
+            currentIteration={currentIteration}
+            issues={issues}
+          />
         </div>
         
         <div className="flex-1"></div>

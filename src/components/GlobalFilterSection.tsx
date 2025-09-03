@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
-import { Search, Circle, User, Tag, Folder, Calendar, X } from 'lucide-react';
+import { Search, Circle, User, Tag, Folder, Calendar, X, Filter } from 'lucide-react';
 import { GitLabIssue, GitLabUser } from '@/types/gitlab';
 import { useDebounce } from '@/components/PerformanceOptimizations';
 
@@ -19,6 +19,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
   const [selectedLabels, setSelectedLabels] = React.useState<string[]>([]);
   const [selectedProjects, setSelectedProjects] = React.useState<string[]>([]);
   const [selectedIterations, setSelectedIterations] = React.useState<string[]>([]);
+  const [selectedCustomFilters, setSelectedCustomFilters] = React.useState<string[]>([]);
 
   // Debounce search term to prevent excessive filtering
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -134,6 +135,12 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     }));
   }, [allProjects]);
 
+  // Create options for custom filters
+  const customFilterOptions = useMemo(() => [
+    { value: 'no-estimate', label: 'No Estimate' },
+    { value: 'no-description', label: 'No Description' }
+  ], []);
+
   // Apply filters
   const filteredIssues = useMemo(() => {
     return issues.filter(issue => {
@@ -203,20 +210,64 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
         }
       }
       
+      // Custom filter
+      if (selectedCustomFilters.length > 0) {
+        const shouldInclude = selectedCustomFilters.some(filter => {
+          switch (filter) {
+            case 'no-estimate':
+              return !issue.time_stats?.time_estimate || issue.time_stats.time_estimate === 0;
+            case 'no-description':
+              return !issue.description || issue.description.trim() === '';
+            default:
+              return false;
+          }
+        });
+        
+        if (!shouldInclude) {
+          return false;
+        }
+      }
+      
       return true;
     });
-  }, [issues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations]);
+  }, [issues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations, selectedCustomFilters]);
 
-  // Notify parent of filtered data changes
+  // Create stable onChange handlers
+  const handleStatusChange = useCallback((statuses: string[]) => {
+    setSelectedStatuses(statuses);
+  }, []);
+
+  const handleAssigneeChange = useCallback((assignees: string[]) => {
+    setSelectedAssignees(assignees);
+  }, []);
+
+  const handleLabelChange = useCallback((labels: string[]) => {
+    setSelectedLabels(labels);
+  }, []);
+
+  const handleProjectChange = useCallback((projects: string[]) => {
+    setSelectedProjects(projects);
+  }, []);
+
+  const handleIterationChange = useCallback((iterations: string[]) => {
+    setSelectedIterations(iterations);
+  }, []);
+
+  const handleCustomFilterChange = useCallback((filters: string[]) => {
+    setSelectedCustomFilters(filters);
+  }, []);
+
+  // Notify parent of filtered data changes only when filter criteria change
   React.useEffect(() => {
-    const hasActiveFilters = !!searchTerm || selectedStatuses.length > 0 || 
+    const hasActiveFilters = debouncedSearchTerm.length > 0 || selectedStatuses.length > 0 || 
                             selectedAssignees.length > 0 || selectedLabels.length > 0 || 
-                            selectedProjects.length > 0 || selectedIterations.length > 0;
+                            selectedProjects.length > 0 || selectedIterations.length > 0 ||
+                            selectedCustomFilters.length > 0;
     onFilteredDataChange(filteredIssues, hasActiveFilters, { 
       assignees: selectedAssignees,
       iterations: selectedIterations
     });
-  }, [filteredIssues, onFilteredDataChange, searchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations]);
+  }, [debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations, selectedCustomFilters, onFilteredDataChange]);
 
   const clearAllFilters = () => {
     setSearchTerm('');
@@ -225,11 +276,13 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     setSelectedLabels([]);
     setSelectedProjects([]);
     setSelectedIterations([]);
+    setSelectedCustomFilters([]);
   };
 
   const hasActiveFilters = searchTerm || selectedStatuses.length > 0 || 
                           selectedAssignees.length > 0 || selectedLabels.length > 0 || 
-                          selectedProjects.length > 0 || selectedIterations.length > 0;
+                          selectedProjects.length > 0 || selectedIterations.length > 0 ||
+                          selectedCustomFilters.length > 0;
 
   // Check if we should show "No issues found" messages
   const showNoAssigneeIssues = selectedAssignees.length > 0 && 
@@ -268,6 +321,20 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
         return isBacklogItem || matchesOtherIterations;
       }
       return selectedIterations.some(iteration => issue.iteration?.title === iteration);
+    });
+
+  const showNoCustomFilterIssues = selectedCustomFilters.length > 0 && 
+    !issues.some(issue => {
+      return selectedCustomFilters.some(filter => {
+        switch (filter) {
+          case 'no-estimate':
+            return !issue.time_stats?.time_estimate || issue.time_stats.time_estimate === 0;
+          case 'no-description':
+            return !issue.description || issue.description.trim() === '';
+          default:
+            return false;
+        }
+      });
     });
 
   const showNoSearchResults = debouncedSearchTerm && filteredIssues.length === 0;
@@ -331,6 +398,12 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
           </div>
         )}
         
+        {showNoCustomFilterIssues && (
+          <div className="text-sm text-muted-foreground py-2">
+            No issues found for the selected custom filter(s)
+          </div>
+        )}
+        
         {showNoSearchResults && (
           <div className="text-sm text-muted-foreground py-2">
             No issues found matching "{debouncedSearchTerm}"
@@ -344,7 +417,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
             <SearchableMultiSelect
               options={statusOptions}
               selected={selectedStatuses}
-              onChange={setSelectedStatuses}
+              onChange={handleStatusChange}
               placeholder="Status"
               icon={<Circle className="h-4 w-4" />}
             />
@@ -355,7 +428,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
             <SearchableMultiSelect
               options={assigneeOptions}
               selected={selectedAssignees}
-              onChange={setSelectedAssignees}
+              onChange={handleAssigneeChange}
               placeholder="Assignee"
               icon={<User className="h-4 w-4" />}
             />
@@ -366,7 +439,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
             <SearchableMultiSelect
               options={labelOptions}
               selected={selectedLabels}
-              onChange={setSelectedLabels}
+              onChange={handleLabelChange}
               placeholder="Label"
               icon={<Tag className="h-4 w-4" />}
             />
@@ -377,7 +450,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
             <SearchableMultiSelect
               options={projectOptions}
               selected={selectedProjects}
-              onChange={setSelectedProjects}
+              onChange={handleProjectChange}
               placeholder="Project"
               icon={<Folder className="h-4 w-4" />}
             />
@@ -388,9 +461,20 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
             <SearchableMultiSelect
               options={iterationOptions}
               selected={selectedIterations}
-              onChange={setSelectedIterations}
+              onChange={handleIterationChange}
               placeholder="Iteration"
               icon={<Calendar className="h-4 w-4" />}
+            />
+          </div>
+          
+          {/* Custom Filter */}
+          <div className="flex-1 min-w-[150px]">
+            <SearchableMultiSelect
+              options={customFilterOptions}
+              selected={selectedCustomFilters}
+              onChange={handleCustomFilterChange}
+              placeholder="Custom"
+              icon={<Filter className="h-4 w-4" />}
             />
           </div>
         </div>

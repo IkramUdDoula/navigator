@@ -64,6 +64,15 @@ export interface GitLabMilestone {
   description?: string;
 }
 
+export interface GitLabIteration {
+  id: number;
+  title: string;
+  state: 'opened' | 'upcoming' | 'started' | 'closed';
+  start_date?: string;
+  due_date?: string;
+  description?: string;
+}
+
 export interface GitLabBoard {
   id: number;
   name: string;
@@ -95,6 +104,42 @@ export interface GitLabLabel {
   color: string;
   description: string;
   text_color?: string;
+}
+
+// Project interface for issue creation
+export interface GitLabProject {
+  id: number;
+  name: string;
+  path_with_namespace: string;
+  default_branch: string;
+  visibility: string;
+  web_url: string;
+}
+
+// Create Issue Request interface
+export interface CreateIssueRequest {
+  projectId: number;
+  title: string;
+  description?: string;
+  assignee_ids?: number[];
+  milestone_id?: number;
+  labels?: string[];
+  weight?: number;
+  time_estimate?: number;
+  iteration_id?: number;
+  state_event?: 'close' | 'reopen';
+}
+
+// Form data interface for the create issue form
+export interface CreateIssueFormData {
+  title: string;
+  description: string;
+  projectId: number | null;
+  assigneeIds: number[];
+  labels: string[];
+  isClosed: boolean;
+  iterationId: number | null;
+  timeEstimate: number | null;
 }
 
 export interface StatusLabelData {
