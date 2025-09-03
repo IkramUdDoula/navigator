@@ -5,6 +5,7 @@ import { TabNavigation, TabType } from '@/components/TabNavigation';
 import { NewEnhancedIssuesList } from '@/components/NewEnhancedIssuesList';
 import { TeamTab } from '@/components/TeamTab';
 import { IterationKanbanBoard } from '@/components/IterationKanbanBoard';
+import { CreateIssueForm } from '@/components/CreateIssueForm';
 
 import { GlobalFilterSection } from '@/components/GlobalFilterSection';
 
@@ -196,6 +197,18 @@ const Index = () => {
           onIssueClick={(issue) => {
             // Open issue URL in new tab
             window.open(issue.web_url, '_blank');
+          }}
+        />;
+        
+      case 'create-issue':
+        return <CreateIssueForm 
+          credentials={currentCredentials}
+          issues={issues}
+          onIssueCreated={() => {
+            // Refetch issues to update the list
+            refetchIssues();
+            // Switch back to issues tab after creating
+            setActiveTab('issues');
           }}
         />;
         

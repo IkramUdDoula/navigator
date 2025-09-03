@@ -31,7 +31,7 @@ interface SearchableMultiSelectProps {
   className?: string;
 }
 
-export const SearchableMultiSelect = React.memo(function SearchableMultiSelect({
+export function SearchableMultiSelect({
   options,
   selected,
   onChange,
@@ -42,6 +42,14 @@ export const SearchableMultiSelect = React.memo(function SearchableMultiSelect({
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
   const prevOpenRef = React.useRef(open);
+
+  // Reset search term when popover closes
+  React.useEffect(() => {
+    if (prevOpenRef.current && !open) {
+      setSearchTerm("");
+    }
+    prevOpenRef.current = open;
+  }, [open]);
 
   // Memoize the options to prevent unnecessary recalculations
   const optionsMap = React.useMemo(() => {
@@ -57,45 +65,29 @@ export const SearchableMultiSelect = React.memo(function SearchableMultiSelect({
     );
   }, [options, searchTerm]);
 
-  const handleSelect = React.useCallback((value: string) => {
-    onChange(prevSelected => {
-      const isSelected = prevSelected.includes(value);
-      if (isSelected) {
-        return prevSelected.filter((item) => item !== value);
-      }
-      // Only update if the value isn't already selected
-      return [...prevSelected, value];
-    });
-  }, [onChange]);
+  const handleSelect = (value: string) => {
+    const isSelected = selected.includes(value);
+    if (isSelected) {
+      onChange(selected.filter((item) => item !== value));
+    } else {
+      onChange([...selected, value]);
+    }
+  };
 
-  const removeSelection = React.useCallback((value: string, e: React.MouseEvent) => {
+  const removeSelection = (value: string, e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    onChange(prevSelected => prevSelected.filter((item) => item !== value));
-  }, [onChange]);
-
-  // Reset search term when popover closes
-  React.useEffect(() => {
-    if (prevOpenRef.current && !open) {
-      setSearchTerm("");
-    }
-    prevOpenRef.current = open;
-  }, [open]);
+    onChange(selected.filter((item) => item !== value));
+  };
 
   // Memoize the selected options to prevent unnecessary re-renders
   const selectedOptions = React.useMemo(() => {
     return selected.map(value => optionsMap.get(value)).filter(Boolean) as Option[];
   }, [selected, optionsMap]);
 
-  const handleOpenChange = React.useCallback((newOpen: boolean) => {
-    setOpen(prevOpen => {
-      // Only update if the state is actually changing
-      if (prevOpen !== newOpen) {
-        return newOpen;
-      }
-      return prevOpen;
-    });
-  }, []);
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+  };
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -129,14 +121,14 @@ export const SearchableMultiSelect = React.memo(function SearchableMultiSelect({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" sideOffset={5} avoidCollisions={true}>
         <Command>
           <CommandInput 
             placeholder="Search..."
             value={searchTerm}
             onValueChange={setSearchTerm}
           />
-          <CommandList className="max-h-60 overflow-y-auto custom-scrollbar">
+          <CommandList className="max-h-[300px] overflow-y-auto custom-scrollbar">
             <CommandEmpty>No option found.</CommandEmpty>
             <CommandGroup>
               {filteredOptions.map((option) => (
@@ -170,4 +162,4 @@ export const SearchableMultiSelect = React.memo(function SearchableMultiSelect({
       </PopoverContent>
     </Popover>
   );
-});
+}

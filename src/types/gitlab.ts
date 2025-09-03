@@ -126,7 +126,6 @@ export interface CreateIssueRequest {
   labels?: string[];
   weight?: number;
   time_estimate?: number;
-  iteration_id?: number;
   state_event?: 'close' | 'reopen';
 }
 
@@ -137,8 +136,6 @@ export interface CreateIssueFormData {
   projectId: number | null;
   assigneeIds: number[];
   labels: string[];
-  isClosed: boolean;
-  iterationId: number | null;
   timeEstimate: number | null;
 }
 

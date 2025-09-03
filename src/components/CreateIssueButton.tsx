@@ -42,7 +42,6 @@ import {
   useGitLabUsers,
   useGitLabLabelsWithStatus,
   useCreateGitLabIssue,
-  useGitLabProjectIterations,
 } from '@/hooks/useGitLabAPI';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +50,6 @@ import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
 
 interface CreateIssueButtonProps {
   credentials: GitLabCredentials | null;
-  currentIteration?: string | null;
   issues?: GitLabIssue[];
 }
 
@@ -62,13 +60,10 @@ const createIssueSchema = z.object({
   timeEstimate: z.number().positive().optional().nullable(),
   assigneeIds: z.array(z.number()).optional(),
   labels: z.array(z.string()).optional(),
-  isClosed: z.boolean().default(false),
-  iterationId: z.number().optional().nullable(),
 });
 
 export function CreateIssueButton({ 
   credentials, 
-  currentIteration,
   issues = []
 }: CreateIssueButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -92,15 +87,7 @@ export function CreateIssueButton({
     return Array.from(labels).sort();
   }, [issues]);
 
-  // Get current iteration ID from issues
-  const currentIterationId = useMemo(() => {
-    if (!currentIteration || !issues.length) return null;
-    
-    const issueWithIteration = issues.find(
-      issue => issue.iteration?.title === currentIteration
-    );
-    return issueWithIteration?.iteration?.id || null;
-  }, [currentIteration, issues]);
+
 
   // Form setup
   const form = useForm<CreateIssueFormData>({
@@ -111,28 +98,12 @@ export function CreateIssueButton({
       projectId: null,
       assigneeIds: [],
       labels: [],
-      isClosed: false,
-      iterationId: currentIterationId,
       timeEstimate: null,
     },
   });
 
-  // Read selected projectId from the form and fetch project-specific iterations
+  // Read selected projectId from the form
   const selectedProjectId = form.watch('projectId');
-  const { data: iterations = [] } = useGitLabProjectIterations(credentials, selectedProjectId);
-
-  // Update iteration when currentIterationId changes
-  React.useEffect(() => {
-    if (currentIterationId) {
-      form.setValue('iterationId', currentIterationId);
-    }
-  }, [currentIterationId, form]);
-
-  // Reset iteration when project changes to ensure iteration belongs to the project's group
-  React.useEffect(() => {
-    // Clear iteration selection on project change
-    form.setValue('iterationId', null);
-  }, [selectedProjectId]);
 
   // Transform form data to API request format
   const transformFormData = (formData: CreateIssueFormData): CreateIssueRequest => {
@@ -148,20 +119,12 @@ export function CreateIssueButton({
       request.labels = formData.labels;
     }
 
-    // Add state event if closed is checked
-    if (formData.isClosed) {
-      request.state_event = 'close';
-    }
-
     // Add time estimate (convert hours to seconds)
     if (formData.timeEstimate) {
       request.time_estimate = formData.timeEstimate * 3600;
     }
 
-    // Add iteration
-    if (formData.iterationId) {
-      request.iteration_id = formData.iterationId;
-    }
+    
 
     return request;
   };
@@ -169,11 +132,16 @@ export function CreateIssueButton({
   const onSubmit = async (data: CreateIssueFormData) => {
     try {
       const issueRequest = transformFormData(data);
-      await createIssueMutation.mutateAsync(issueRequest);
+      const createdIssue = await createIssueMutation.mutateAsync(issueRequest);
       
       toast.success('Issue created successfully!', {
         description: `"${data.title}" has been created.`,
       });
+      
+      // Automatically open the created issue in a new tab
+      if (createdIssue?.web_url) {
+        window.open(createdIssue.web_url, '_blank', 'noopener,noreferrer');
+      }
       
       // Close dialog and reset form
       setIsOpen(false);
@@ -184,8 +152,6 @@ export function CreateIssueButton({
         projectId: null,
         assigneeIds: [],
         labels: [],
-        isClosed: false,
-        iterationId: currentIterationId,
         timeEstimate: null,
       });
     } catch (error) {
@@ -211,6 +177,14 @@ export function CreateIssueButton({
       color: undefined,
     }));
   }, [allLabels]);
+
+  // Assignee options (similar to GlobalFilterSection)
+  const assigneeOptions = useMemo(() => {
+    return users.map(user => ({
+      value: user.id.toString(),
+      label: user.name
+    }));
+  }, [users]);
 
   // Filtered users based on search
   const filteredUsers = useMemo(() => {
@@ -241,11 +215,11 @@ export function CreateIssueButton({
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Create New Issue</DialogTitle>
             <DialogDescription>
-              Create a new GitLab issue. Fill in the fields in sequence: Title, Project, Labels, Estimation, Iteration, Create as Closed, Assignee, and Description.
+              Create a new GitLab issue. Fill in the fields in sequence: Title, Project, Estimation, Assignee, Labels, and Description.
             </DialogDescription>
           </DialogHeader>
 
@@ -330,65 +304,33 @@ export function CreateIssueButton({
                     )}
                   />
 
-                  {/* 5. Iteration */}
+                  {/* 5. Assignee - now positioned under Estimation */}
                   <FormField
                     control={form.control}
-                    name="iterationId"
+                    name="assigneeIds"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Iteration</FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(value && value !== "no-iteration" ? parseInt(value) : null)}
-                          value={field.value ? field.value.toString() : "no-iteration"}
-                          disabled={!selectedProjectId}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select an iteration" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="no-iteration">
-                              No iteration
-                            </SelectItem>
-                            {iterations.map((iteration) => (
-                              <SelectItem key={iteration.id} value={iteration.id.toString()}>
-                                {iteration.title}
-                                {iteration.id === currentIterationId && " (Current)"}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* 6. Create as Closed */}
-                  <FormField
-                    control={form.control}
-                    name="isClosed"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormLabel>Assignee</FormLabel>
                         <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
+                          <div className="flex-1 min-w-[150px] relative">
+                            <SearchableMultiSelect
+                              options={assigneeOptions}
+                              selected={field.value?.map(id => id.toString()) || []}
+                              onChange={(selected) => {
+                                field.onChange(selected.map(id => parseInt(id)));
+                              }}
+                              placeholder="Select assignees..."
+                            />
+                          </div>
                         </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Create as Closed</FormLabel>
-                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-
-                  
                 </div>
               </div>
 
-              {/* Labels and Assignee - stacked vertically below the checkbox */}
+              {/* Labels - now the only item in this section */}
               <div className="space-y-6">
                 {/* Labels */}
                 <FormField
@@ -452,72 +394,6 @@ export function CreateIssueButton({
                           : `${allLabels.length} labels available from existing issues.`
                         }
                       </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Assignee */}
-                <FormField
-                  control={form.control}
-                  name="assigneeIds"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Assignee</FormLabel>
-                      <FormControl>
-                        <div className="space-y-3">
-                          {/* Search Input */}
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                            <Input
-                              placeholder="Search assignees..."
-                              value={assigneeSearch}
-                              onChange={(e) => setAssigneeSearch(e.target.value)}
-                              className="pl-9"
-                            />
-                          </div>
-
-                          {/* Assignee Chips */}
-                          <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-[2.5rem] max-h-40 overflow-y-auto custom-scrollbar">
-                            {filteredUsers.map((user) => {
-                              const isSelected = (field.value || []).includes(user.id);
-                              return (
-                                <button
-                                  key={user.id}
-                                  type="button"
-                                  onClick={() => {
-                                    const current = field.value || [];
-                                    if (isSelected) {
-                                      field.onChange(current.filter(id => id !== user.id));
-                                    } else {
-                                      field.onChange([...current, user.id]);
-                                    }
-                                  }}
-                                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                                    isSelected
-                                      ? 'bg-primary text-primary-foreground'
-                                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                                  }`}
-                                >
-                                  <Avatar className="h-5 w-5">
-                                    <AvatarImage src={user.avatar_url} alt={user.name} />
-                                    <AvatarFallback className="text-xs">
-                                      {user.name.split(' ').map(n => n[0]).join('')}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span>{user.name}</span>
-                                </button>
-                              );
-                            })}
-                            {filteredUsers.length === 0 && assigneeSearch && (
-                              <span className="text-muted-foreground text-sm">No users found matching "{assigneeSearch}"</span>
-                            )}
-                            {users.length === 0 && (
-                              <span className="text-muted-foreground text-sm">No users available</span>
-                            )}
-                          </div>
-                        </div>
-                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

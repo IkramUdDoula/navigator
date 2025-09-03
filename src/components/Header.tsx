@@ -3,7 +3,6 @@ import { LogOut, Moon, Sun, Settings } from 'lucide-react';
 import { GitLabCredentials, GitLabIssue } from '@/types/gitlab';
 import { useState } from 'react';
 import { SettingsDialog } from '@/components/SettingsDialog';
-import { CreateIssueButton } from '@/components/CreateIssueButton';
 
 interface HeaderProps {
   credentials: GitLabCredentials;
@@ -33,11 +32,6 @@ export function Header({
       <div className="flex h-16 items-center px-6 gap-6">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold">Navigator</h1>
-          <CreateIssueButton 
-            credentials={credentials}
-            currentIteration={currentIteration}
-            issues={issues}
-          />
         </div>
         
         <div className="flex-1"></div>
