@@ -189,6 +189,14 @@ export function CreateIssueForm({
     return options;
   }, [users]);
 
+  // Project options for the searchable dropdown
+  const projectOptions = useMemo(() => {
+    return projects.map(project => ({
+      value: project.id.toString(),
+      label: project.name
+    }));
+  }, [projects]);
+
   // Filtered labels based on search
   const filteredLabels = useMemo(() => {
     if (!labelSearch.trim()) return allLabels;
@@ -255,23 +263,22 @@ export function CreateIssueForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Project *</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      value={field.value?.toString() || ''}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a project" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {projects.map((project) => (
-                          <SelectItem key={project.id} value={project.id.toString()}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <SearchableMultiSelect
+                        options={projectOptions}
+                        selected={field.value ? [field.value.toString()] : []}
+                        onChange={(selected) => {
+                          // Ensure only one project can be selected (single select behavior)
+                          if (selected.length > 0) {
+                            field.onChange(parseInt(selected[selected.length - 1]));
+                          } else {
+                            field.onChange(null);
+                          }
+                        }}
+                        placeholder="Select a project"
+                        className="w-full"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
