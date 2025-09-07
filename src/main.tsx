@@ -2,6 +2,21 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
+// Vercel Analytics & Speed Insights (for non-Next.js apps)
+import { inject } from '@vercel/analytics'
+import { injectSpeedInsights } from '@vercel/speed-insights'
+
+// Initialize analytics in all environments
+try {
+  inject()
+  console.log('[Vercel] Analytics injected')
+  injectSpeedInsights()
+  console.log('[Vercel] Speed Insights injected')
+} catch (e) {
+  // Avoid breaking the app if analytics fail to initialize
+  console.warn('Vercel analytics initialization skipped:', e)
+}
+
 // Register service worker for PWA functionality
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
