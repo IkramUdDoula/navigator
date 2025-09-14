@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './KanbanCard';
@@ -8,6 +8,8 @@ import { StatusBadge } from './StatusBadge';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useGitLabUsers } from '@/hooks/useGitLabAPI';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { ExportIssuesDialog } from '@/components/ExportIssuesDialog';
 
 interface IterationKanbanBoardProps {
   issues: GitLabIssue[];
@@ -29,6 +31,7 @@ export function IterationKanbanBoard({
   
   // Get credentials for basic functionality
   const [credentials] = useLocalStorage<GitLabCredentials | null>('gitlab-credentials', null);
+  const [exportOpen, setExportOpen] = useState(false);
   
   // Fetch users for sprint analytics
   const { data: users = [] } = useGitLabUsers(credentials);
@@ -101,6 +104,25 @@ export function IterationKanbanBoard({
 
   const totalIssues = statusColumns.reduce((sum, col) => sum + col.issues.length, 0);
 
+  // Determine current iteration name from provided issues (most represented)
+  const currentIterationName = useMemo(() => {
+    const counts = new Map<string, number>();
+    issues.forEach(issue => {
+      const t = issue.iteration?.title;
+      if (t) counts.set(t, (counts.get(t) || 0) + 1);
+    });
+    let maxK: string | null = null;
+    let maxV = 0;
+    counts.forEach((v, k) => { if (v > maxV) { maxV = v; maxK = k; } });
+    return maxK;
+  }, [issues]);
+
+  // Only include issues from the current iteration for export
+  const iterationIssues = useMemo(() => {
+    if (!currentIterationName) return issues;
+    return issues.filter(i => i.iteration?.title === currentIterationName);
+  }, [issues, currentIterationName]);
+
   return (
     <div className={cn("space-y-6", className)}>
       {/* Sprint Analytics - Above Kanban Board */}
@@ -109,6 +131,20 @@ export function IterationKanbanBoard({
         users={users}
         className="bg-muted/30 rounded-lg"
       />
+
+      {/* Export Bar */}
+      <div className="flex items-center justify-between px-6">
+        <div className="text-sm text-muted-foreground">
+          {currentIterationName ? (
+            <span>
+              Iteration: <span className="font-medium">{currentIterationName}</span> · {totalIssues} issues
+            </span>
+          ) : (
+            <span>{totalIssues} issues</span>
+          )}
+        </div>
+        <Button onClick={() => setExportOpen(true)}>Export CSV</Button>
+      </div>
 
       <div className="p-6 space-y-6">
       {/* Kanban Board */}
@@ -157,6 +193,14 @@ export function IterationKanbanBoard({
         </div>
       )}
       </div>
+
+      {/* Export Dialog */}
+      <ExportIssuesDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        issues={iterationIssues}
+        iterationName={currentIterationName || null}
+      />
     </div>
   );
 }
