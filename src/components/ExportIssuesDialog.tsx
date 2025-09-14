@@ -105,16 +105,50 @@ function issuesToCSV(issues: GitLabIssue[], columns: ExportColumnKey[], suggeste
   });
   const csv = [header, ...lines].join('\n');
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = suggestedFilename || 'issues.csv';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const filename = suggestedFilename || 'issues.csv';
+
+  try {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+
+    // 1) IE/Edge legacy
+    // @ts-ignore
+    if (typeof window !== 'undefined' && window.navigator && window.navigator.msSaveOrOpenBlob) {
+      // @ts-ignore
+      window.navigator.msSaveOrOpenBlob(blob, filename);
+      return;
+    }
+
+    // 2) Standard object URL download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return;
+  } catch (e) {
+    // Continue to data URI fallback
+    console.warn('Blob download failed, attempting data URI fallback', e);
+  }
+
+  try {
+    // 3) Data URI fallback (may be limited by size/CSP)
+    const dataUrl = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (e2) {
+    console.error('All CSV download methods failed.', e2);
+  }
 }
 
 export function ExportIssuesDialog({

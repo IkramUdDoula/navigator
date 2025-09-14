@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './KanbanCard';
@@ -123,6 +123,17 @@ export function IterationKanbanBoard({
     return issues.filter(i => i.iteration?.title === currentIterationName);
   }, [issues, currentIterationName]);
 
+  // Debug: log when button should be visible and presence in DOM
+  useEffect(() => {
+    const btn = document.getElementById('export-csv-btn');
+    console.log('[IterationKanbanBoard] Export CSV button render check', {
+      hasIssues: issues.length > 0,
+      totalIssues,
+      currentIterationName,
+      buttonPresentInDOM: !!btn,
+    });
+  }, [issues.length, totalIssues, currentIterationName]);
+
   return (
     <div className={cn("space-y-6", className)}>
       {/* Sprint Analytics - Above Kanban Board */}
@@ -143,7 +154,10 @@ export function IterationKanbanBoard({
             <span>{totalIssues} issues</span>
           )}
         </div>
-        <Button onClick={() => setExportOpen(true)}>Export CSV</Button>
+        <Button id="export-csv-btn" onClick={() => {
+          console.log('[IterationKanbanBoard] Export CSV button clicked');
+          setExportOpen(true);
+        }}>Export CSV</Button>
       </div>
 
       <div className="p-6 space-y-6">
