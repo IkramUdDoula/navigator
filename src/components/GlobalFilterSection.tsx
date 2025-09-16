@@ -3,13 +3,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
 import { Search, Circle, User, Tag, Folder, Calendar, X, Filter } from 'lucide-react';
-import { GitLabIssue, GitLabUser } from '@/types/gitlab';
+import { GitLabIssue, GitLabUser, GitLabMilestone } from '@/types/gitlab';
 import { useDebounce } from '@/components/PerformanceOptimizations';
 
 interface GlobalFilterSectionProps {
   issues: GitLabIssue[];
   users: GitLabUser[];
-  onFilteredDataChange: (filteredIssues: GitLabIssue[], hasActiveFilters: boolean, selectedFilters?: { assignees?: string[], iterations?: string[] }) => void;
+  onFilteredDataChange: (filteredIssues: GitLabIssue[], hasActiveFilters: boolean, selectedFilters?: { assignees?: string[], iterations?: string[], milestones?: string[] }) => void;
 }
 
 export function GlobalFilterSection({ issues, users, onFilteredDataChange }: GlobalFilterSectionProps) {
@@ -19,6 +19,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
   const [selectedLabels, setSelectedLabels] = React.useState<string[]>([]);
   const [selectedProjects, setSelectedProjects] = React.useState<string[]>([]);
   const [selectedIterations, setSelectedIterations] = React.useState<string[]>([]);
+  const [selectedMilestones, setSelectedMilestones] = React.useState<string[]>([]);
   const [selectedCustomFilters, setSelectedCustomFilters] = React.useState<string[]>([]);
 
   // Debounce search term to prevent excessive filtering
@@ -49,6 +50,17 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
       }
     });
     return Array.from(projects).sort();
+  }, [issues]);
+
+  // Extract unique milestones from issues
+  const allMilestones = useMemo(() => {
+    const milestones = new Map<string, GitLabMilestone>();
+    issues.forEach(issue => {
+      if (issue.milestone) {
+        milestones.set(issue.milestone.title, issue.milestone);
+      }
+    });
+    return Array.from(milestones.values()).sort((a, b) => a.title.localeCompare(b.title));
   }, [issues]);
 
   // Extract unique iterations from issues with date information
@@ -135,6 +147,14 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     }));
   }, [allProjects]);
 
+  // Create milestone options
+  const milestoneOptions = useMemo(() => {
+    return allMilestones.map(milestone => ({
+      value: milestone.title,
+      label: milestone.title
+    }));
+  }, [allMilestones]);
+
   // Create options for custom filters
   const customFilterOptions = useMemo(() => [
     { value: 'no-estimate', label: 'No Estimate' },
@@ -210,6 +230,13 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
         }
       }
       
+      // Milestone filter
+      if (selectedMilestones.length > 0) {
+        if (!issue.milestone || !selectedMilestones.includes(issue.milestone.title)) {
+          return false;
+        }
+      }
+      
       // Custom filter
       if (selectedCustomFilters.length > 0) {
         const shouldInclude = selectedCustomFilters.some(filter => {
@@ -230,7 +257,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
       
       return true;
     });
-  }, [issues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations, selectedCustomFilters]);
+  }, [issues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations, selectedMilestones, selectedCustomFilters]);
 
   // Create stable onChange handlers
   const handleStatusChange = useCallback((statuses: string[]) => {
@@ -253,6 +280,10 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     setSelectedIterations(iterations);
   }, []);
 
+  const handleMilestoneChange = useCallback((milestones: string[]) => {
+    setSelectedMilestones(milestones);
+  }, []);
+
   const handleCustomFilterChange = useCallback((filters: string[]) => {
     setSelectedCustomFilters(filters);
   }, []);
@@ -262,12 +293,14 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     const hasActiveFilters = debouncedSearchTerm.length > 0 || selectedStatuses.length > 0 || 
                             selectedAssignees.length > 0 || selectedLabels.length > 0 || 
                             selectedProjects.length > 0 || selectedIterations.length > 0 ||
+                            selectedMilestones.length > 0 ||
                             selectedCustomFilters.length > 0;
     onFilteredDataChange(filteredIssues, hasActiveFilters, { 
       assignees: selectedAssignees,
-      iterations: selectedIterations
+      iterations: selectedIterations,
+      milestones: selectedMilestones
     });
-  }, [debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations, selectedCustomFilters, onFilteredDataChange]);
+  }, [debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations, selectedMilestones, selectedCustomFilters, onFilteredDataChange]);
 
   const clearAllFilters = () => {
     setSearchTerm('');
@@ -276,12 +309,14 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     setSelectedLabels([]);
     setSelectedProjects([]);
     setSelectedIterations([]);
+    setSelectedMilestones([]);
     setSelectedCustomFilters([]);
   };
 
   const hasActiveFilters = searchTerm || selectedStatuses.length > 0 || 
                           selectedAssignees.length > 0 || selectedLabels.length > 0 || 
                           selectedProjects.length > 0 || selectedIterations.length > 0 ||
+                          selectedMilestones.length > 0 ||
                           selectedCustomFilters.length > 0;
 
   // Check if we should show "No issues found" messages
@@ -321,6 +356,11 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
         return isBacklogItem || matchesOtherIterations;
       }
       return selectedIterations.some(iteration => issue.iteration?.title === iteration);
+    });
+
+  const showNoMilestoneIssues = selectedMilestones.length > 0 && 
+    !issues.some(issue => {
+      return selectedMilestones.some(milestone => issue.milestone?.title === milestone);
     });
 
   const showNoCustomFilterIssues = selectedCustomFilters.length > 0 && 
@@ -398,6 +438,12 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
           </div>
         )}
         
+        {showNoMilestoneIssues && (
+          <div className="text-sm text-muted-foreground py-2">
+            No issues found for the selected milestone(s)
+          </div>
+        )}
+        
         {showNoCustomFilterIssues && (
           <div className="text-sm text-muted-foreground py-2">
             No issues found for the selected custom filter(s)
@@ -463,6 +509,17 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
               selected={selectedIterations}
               onChange={handleIterationChange}
               placeholder="Iteration"
+              icon={<Calendar className="h-4 w-4" />}
+            />
+          </div>
+          
+          {/* Milestone Filter */}
+          <div className="flex-1 min-w-[150px]">
+            <SearchableMultiSelect
+              options={milestoneOptions}
+              selected={selectedMilestones}
+              onChange={handleMilestoneChange}
+              placeholder="Milestone"
               icon={<Calendar className="h-4 w-4" />}
             />
           </div>

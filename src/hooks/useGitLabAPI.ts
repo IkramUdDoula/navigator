@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { GitLabCredentials, GitLabIssue, GitLabUser, GitLabLabel, StatusLabelData, GitLabProject, CreateIssueRequest, GitLabIteration } from '@/types/gitlab';
+import { GitLabCredentials, GitLabIssue, GitLabUser, GitLabLabel, StatusLabelData, GitLabProject, CreateIssueRequest, GitLabIteration, GitLabMilestone } from '@/types/gitlab';
 import { StatusResolutionService } from '@/lib/statusResolutionService';
 import { useMemo } from 'react';
 
@@ -306,7 +306,12 @@ export const useCreateGitLabIssue = (credentials: GitLabCredentials | null) => {
 
             const graphqlEndpoint = `${credentials.host.replace(/\/$/, '')}/api/graphql`;
             const iterationGID = `gid://gitlab/Iteration/${issueData.iteration_id}`;
-            const mutation = `mutation UpdateIssueIteration($projectPath: ID!, $iid: String!, $iterationId: ID!) {\n  updateIssue(input: { projectPath: $projectPath, iid: $iid, iterationId: $iterationId }) {\n    issue { iid iteration { id title } }\n    errors\n  }\n}`;
+            const mutation = `mutation UpdateIssueIteration($projectPath: ID!, $iid: String!, $iterationId: ID!) {
+  updateIssue(input: { projectPath: $projectPath, iid: $iid, iterationId: $iterationId }) {
+    issue { iid iteration { id title } }
+    errors
+  }
+}`;
             const variables = {
               projectPath: project.path_with_namespace,
               iid: String(created.iid),
@@ -388,6 +393,43 @@ export const useGitLabProjectIterations = (
       );
     },
     enabled: !!credentials && !!projectId,
+    refetchOnWindowFocus: false,
+  });
+};
+
+/**
+ * Hook to fetch milestones for the current group
+ */
+export const useGitLabGroupMilestones = (credentials: GitLabCredentials | null) => {
+  return useQuery({
+    queryKey: ['gitlab-milestones', credentials?.groupId],
+    queryFn: async (): Promise<GitLabMilestone[]> => {
+      if (!credentials) throw new Error('No credentials provided');
+      
+      const client = createGitLabClient(credentials);
+      // Fetch all milestones with different states
+      const states = ['active', 'closed', 'upcoming', 'started'];
+      let allMilestones: GitLabMilestone[] = [];
+      
+      for (const state of states) {
+        try {
+          const milestones = await client.makeRequest<GitLabMilestone[]>(
+            `/groups/${credentials.groupId}/milestones?state=${state}&per_page=100`
+          );
+          allMilestones = [...allMilestones, ...milestones];
+        } catch (error) {
+          console.warn(`Failed to fetch milestones with state ${state}:`, error);
+        }
+      }
+      
+      // Remove duplicates based on id
+      const uniqueMilestones = allMilestones.filter((milestone, index, self) => 
+        index === self.findIndex(m => m.id === milestone.id)
+      );
+      
+      return uniqueMilestones;
+    },
+    enabled: !!credentials,
     refetchOnWindowFocus: false,
   });
 };
