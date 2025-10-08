@@ -170,6 +170,14 @@ const Index = () => {
   const handleCredentialsSubmit = (newCredentials: GitLabCredentials) => {
     setCredentials(newCredentials);
     setGroupPath(newCredentials.groupId);
+    
+    // Check if there's a redirect URL stored
+    const redirectUrl = localStorage.getItem('redirect-after-login');
+    if (redirectUrl) {
+      localStorage.removeItem('redirect-after-login');
+      // Use window.location to navigate to the stored URL
+      window.location.href = redirectUrl;
+    }
   };
 
   const handleLogout = () => {

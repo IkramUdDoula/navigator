@@ -320,11 +320,26 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
               <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h2 className="text-lg font-semibold mb-2">Authentication Required</h2>
               <p className="text-muted-foreground mb-4">
-                Please log in to view issue details.
+                Please log in with your GitLab credentials to view issue details.
               </p>
-              <Button onClick={() => navigate('/')}>
-                Go to Login
-              </Button>
+              <div className="space-y-2">
+                <Button 
+                  onClick={() => {
+                    // Store the current URL to redirect back after login
+                    localStorage.setItem('redirect-after-login', window.location.href);
+                    navigate('/');
+                  }} 
+                  className="w-full"
+                >
+                  Go to Login
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Issue: {decodedProjectPath}#{parsedIssueIid}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  You'll be redirected back here after logging in.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -354,9 +369,16 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
               <p className="text-muted-foreground mb-4">
                 The requested issue could not be found or you don't have permission to view it.
               </p>
-              <Button onClick={() => navigate(sourceTab)}>
-                Back
-              </Button>
+              <div className="space-y-2">
+                <Button onClick={() => navigate(sourceTab)} className="w-full">
+                  Back
+                </Button>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>Project: {decodedProjectPath}</p>
+                  <p>Issue IID: #{parsedIssueIid}</p>
+                  {error && <p className="text-destructive">Error: {error.message}</p>}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
