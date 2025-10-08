@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Clock, User, Tag } from 'lucide-react';
+import { Clock, User, Tag, Flag, Hash } from 'lucide-react';
 import { GitLabIssue } from '@/types/gitlab';
 import { cn } from '@/lib/utils';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -75,7 +75,6 @@ export function KanbanCard({ issue, onClick, className }: KanbanCardProps) {
         <div className="text-xs text-muted-foreground">
           #{issue.iid}
         </div>
-        
         {/* Second line - Issue title (big font) */}
         <div className="font-semibold text-sm leading-tight">
           {issue.title}
@@ -105,13 +104,21 @@ export function KanbanCard({ issue, onClick, className }: KanbanCardProps) {
           )}
         </div>
         
+        {/* Epic name - if exists */}
+        {issue.epic?.title && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Flag className="w-3 h-3 text-muted-foreground" />
+            <span className="truncate">{issue.epic.title}</span>
+          </div>
+        )}
+        
         {/* Fourth line - All labels with bullet points */}
         {issue.labels.length > 0 && (
           <div className="flex items-start gap-1 text-xs text-muted-foreground">
             <div className="flex flex-col space-y-0.5">
               {issue.labels.map((label, index) => (
                 <div key={index} className="flex items-start gap-1">
-                  <span className="text-muted-foreground/70 mt-0.5">•</span>
+                  <Hash className="w-3 h-3 text-muted-foreground mt-0.5 flex-shrink-0" />
                   <span className="line-clamp-1">{label.replace('Status::', '')}</span>
                 </div>
               ))}
