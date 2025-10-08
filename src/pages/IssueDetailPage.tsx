@@ -44,14 +44,21 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
   const [storedCredentials] = useLocalStorage<GitLabCredentials | null>('gitlab-credentials', null);
   const credentials = propCredentials || storedCredentials;
   
+  // Get saved theme preference
+  const [theme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
   // Get label colors from localStorage
   const [labelColors] = useLocalStorage<Record<string, string>>('label-colors', {});
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const defaultLabelColor = '#6c757d'; // Gray color as default
-  
+
   // Parse URL parameters
   const decodedProjectPath = projectId ? decodeURIComponent(projectId) : null;
   const parsedIssueIid = issueIid ? parseInt(issueIid, 10) : null;
+
+  // Apply the saved theme
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
 
   // Helper function to extract project name from project path
   const getProjectName = (projectPath: string | null): string | null => {
@@ -445,7 +452,7 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
               <div className="flex items-center gap-2">
                 <Badge 
                   variant={issue.state === 'opened' ? 'default' : 'secondary'}
-                  className={`${issue.state === 'opened' ? 'bg-stone-900 hover:bg-green-600' : 'bg-gray-500'} text-white font-medium`}
+                  className={`${issue.state === 'opened' ? 'bg-stone-900 hover:bg-stone-600' : 'bg-gray-500'} text-white font-medium`}
                 >
                   {issue.state === 'opened' ? 'Open' : 'Closed'}
                 </Badge>
