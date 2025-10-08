@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { GitLabCredentials, GitLabIssue, GitLabUser, GitLabLabel, StatusLabelData, GitLabProject, CreateIssueRequest, GitLabIteration, GitLabMilestone } from '@/types/gitlab';
+import { GitLabCredentials, GitLabIssue, GitLabUser, GitLabLabel, StatusLabelData, GitLabProject, CreateIssueRequest, GitLabIteration, GitLabMilestone, GitLabEpic } from '@/types/gitlab';
 import { StatusResolutionService } from '@/lib/statusResolutionService';
 import { useMemo } from 'react';
 
@@ -57,7 +57,8 @@ export const useGitLabIssues = (credentials: GitLabCredentials | null) => {
       return allIssues;
     },
     enabled: !!credentials,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
+    refetchInterval: 30000, // Poll every 30 seconds for real-time updates
   });
 };
 
@@ -71,7 +72,8 @@ export const useGitLabUsers = (credentials: GitLabCredentials | null) => {
       return client.makeRequest<GitLabUser[]>(`/groups/${credentials.groupId}/members?per_page=100`);
     },
     enabled: !!credentials,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60000, // Poll every 60 seconds
   });
 };
 
@@ -408,7 +410,8 @@ export const useGitLabGroupMilestones = (credentials: GitLabCredentials | null) 
       
       const client = createGitLabClient(credentials);
       // Fetch all milestones with different states
-      const states = ['active', 'closed', 'upcoming', 'started'];
+      // Valid GitLab milestone states: active, closed
+      const states = ['active', 'closed'];
       let allMilestones: GitLabMilestone[] = [];
       
       for (const state of states) {
@@ -432,4 +435,202 @@ export const useGitLabGroupMilestones = (credentials: GitLabCredentials | null) 
     enabled: !!credentials,
     refetchOnWindowFocus: false,
   });
+};
+
+/**
+ * Hook to fetch GitLab epics for a group
+ */
+export const useGitLabEpics = (credentials: GitLabCredentials | null) => {
+  return useQuery({
+    queryKey: ['gitlab-epics', credentials?.groupId],
+    queryFn: async (): Promise<GitLabEpic[]> => {
+      if (!credentials) throw new Error('No credentials provided');
+      
+      const client = createGitLabClient(credentials);
+      try {
+        // Fetch epics from the group
+        const epics = await client.makeRequest<GitLabEpic[]>(
+          `/groups/${credentials.groupId}/epics?per_page=100`
+        );
+        return epics;
+      } catch (error) {
+        console.warn('Failed to fetch epics (may not be available in this GitLab instance):', error);
+        return [];
+      }
+    },
+    enabled: !!credentials,
+    refetchOnWindowFocus: true,
+    refetchInterval: 60000, // Poll every 60 seconds
+  });
+};
+
+/**
+ * Hook to fetch a single GitLab issue by project path/ID and issue IID
+ */
+export const useGitLabIssue = (
+  credentials: GitLabCredentials | null,
+  projectPathOrId: string | number | null,
+  issueIid: number | null
+) => {
+  return useQuery({
+    queryKey: ['gitlab-issue', projectPathOrId, issueIid],
+    queryFn: async (): Promise<GitLabIssue> => {
+      if (!credentials) throw new Error('No credentials provided');
+      if (!projectPathOrId || !issueIid) throw new Error('Project path/ID and Issue IID are required');
+      
+      const client = createGitLabClient(credentials);
+      // URL-encode the project path for the API call
+      const encodedProject = encodeURIComponent(projectPathOrId.toString());
+      return client.makeRequest<GitLabIssue>(
+        `/projects/${encodedProject}/issues/${issueIid}?with_time_stats=true`
+      );
+    },
+    enabled: !!credentials && !!projectPathOrId && !!issueIid,
+    refetchOnWindowFocus: true,
+    // Enable real-time updates with polling
+    refetchInterval: 15000, // Refetch every 15 seconds for individual issues
+  });
+};
+
+/**
+ * Interface for updating an issue
+ */
+export interface UpdateIssueRequest {
+  projectId: string | number;
+  issueIid: number;
+  title?: string;
+  description?: string;
+  assignee_ids?: number[];
+  milestone_id?: number | null;
+  labels?: string[];
+  state_event?: 'close' | 'reopen';
+  time_estimate?: number;
+  time_spent?: number;
+  iteration_id?: number | null;
+  epic_id?: number | null;
+}
+
+/**
+ * Hook to update a GitLab issue
+ */
+export const useUpdateGitLabIssue = (credentials: GitLabCredentials | null) => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (updateData: UpdateIssueRequest) => {
+      if (!credentials) throw new Error('No credentials provided');
+      
+      const client = createGitLabClient(credentials);
+      
+      // Prepare the update payload
+      const updatePayload: any = { ...updateData };
+      delete updatePayload.projectId;
+      delete updatePayload.issueIid;
+      
+      // Convert labels array to comma-separated string if provided
+      if (updateData.labels) {
+        updatePayload.labels = updateData.labels.join(',');
+      }
+      
+      // URL-encode the project path for the API call
+      const encodedProject = encodeURIComponent(updateData.projectId.toString());
+      
+      // Update the issue
+      const updatedIssue = await client.makeRequest<GitLabIssue>(
+        `/projects/${encodedProject}/issues/${updateData.issueIid}`,
+        'PUT',
+        updatePayload
+      );
+      
+      // Handle time estimate separately if provided
+      if (updateData.time_estimate !== undefined) {
+        try {
+          const seconds = updateData.time_estimate;
+          if (seconds > 0) {
+            const totalMinutes = Math.max(0, Math.floor(seconds / 60));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            const duration = `${hours > 0 ? `${hours}h` : ''}${minutes > 0 ? `${minutes}m` : hours === 0 ? '0m' : ''}`;
+
+            await client.makeRequest(
+              `/projects/${encodedProject}/issues/${updateData.issueIid}/time_estimate?duration=${encodeURIComponent(duration)}`,
+              'POST'
+            );
+          } else {
+            // Reset time estimate to 0
+            await client.makeRequest(
+              `/projects/${encodedProject}/issues/${updateData.issueIid}/reset_time_estimate`,
+              'POST'
+            );
+          }
+        } catch (e) {
+          console.warn('Failed to update time estimate:', e);
+        }
+      }
+      
+      // Handle time spent separately if provided
+      // Note: GitLab API typically adds time incrementally, but we'll try to set absolute value
+      if (updateData.time_spent !== undefined) {
+        try {
+          const seconds = updateData.time_spent;
+          if (seconds >= 0) {
+            const totalMinutes = Math.max(0, Math.floor(seconds / 60));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            const duration = `${hours > 0 ? `${hours}h` : ''}${minutes > 0 ? `${minutes}m` : hours === 0 && minutes === 0 ? '0m' : ''}`;
+
+            // First reset the time spent, then add the new amount
+            await client.makeRequest(
+              `/projects/${encodedProject}/issues/${updateData.issueIid}/reset_spent_time`,
+              'POST'
+            );
+            
+            if (seconds > 0) {
+              await client.makeRequest(
+                `/projects/${encodedProject}/issues/${updateData.issueIid}/add_spent_time?duration=${encodeURIComponent(duration)}`,
+                'POST'
+              );
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to update time spent:', e);
+        }
+      }
+      
+      return updatedIssue;
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate and refetch related queries
+      queryClient.invalidateQueries({ queryKey: ['gitlab-issues'] });
+      queryClient.invalidateQueries({ queryKey: ['gitlab-issue', variables.projectId, variables.issueIid] });
+    },
+  });
+};
+
+/**
+ * Hook to get project ID from issue web URL
+ */
+export const useProjectIdFromIssue = (issue: GitLabIssue | null) => {
+  return useMemo(() => {
+    if (!issue?.web_url) return null;
+    
+    try {
+      // Extract project ID from GitLab issue URL
+      // URL format: https://gitlab.com/group/project/-/issues/123
+      const url = new URL(issue.web_url);
+      const pathParts = url.pathname.split('/');
+      const issueIndex = pathParts.findIndex(part => part === 'issues');
+      
+      if (issueIndex > 0) {
+        // Get the project path (everything before /-/issues)
+        const projectPath = pathParts.slice(1, issueIndex - 1).join('/');
+        return projectPath;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Failed to extract project ID from issue URL:', error);
+      return null;
+    }
+  }, [issue?.web_url]);
 };

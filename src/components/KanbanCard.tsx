@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Clock, User, Tag, Flag, Hash } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Clock, User, Tag, Flag, Hash, ExternalLink, Eye } from 'lucide-react';
 import { GitLabIssue } from '@/types/gitlab';
 import { cn } from '@/lib/utils';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -25,6 +27,7 @@ const formatEstimatedTime = (timeEstimate: number): string => {
 };
 
 export function KanbanCard({ issue, onClick, className }: KanbanCardProps) {
+  const navigate = useNavigate();
   const [labelColors] = useLocalStorage<Record<string, string>>('label-colors', {});
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const defaultColor = '#6c757d'; // Gray color as default
@@ -47,10 +50,45 @@ export function KanbanCard({ issue, onClick, className }: KanbanCardProps) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const handleClick = () => {
-    if (onClick) {
-      onClick(issue);
+  // Helper function to extract project ID from issue URL
+  const getProjectIdFromIssue = (issue: GitLabIssue): string | null => {
+    try {
+      const url = new URL(issue.web_url);
+      const pathParts = url.pathname.split('/');
+      const issueIndex = pathParts.findIndex(part => part === 'issues');
+      
+      if (issueIndex > 0) {
+        // Get the project path (everything before /-/issues)
+        const projectPath = pathParts.slice(1, issueIndex - 1).join('/');
+        return projectPath;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Failed to extract project ID from issue URL:', error);
+      return null;
     }
+  };
+
+  const handleClick = () => {
+    // Card click does nothing - only icons trigger actions
+  };
+
+  const handleEyeClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Open issue detail page in new tab with source tab info
+    const projectPath = getProjectIdFromIssue(issue);
+    if (projectPath) {
+      window.open(`/issue/${encodeURIComponent(projectPath)}/${issue.iid}?from=/`, '_blank');
+    }
+  };
+
+  const handleGitLabClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Open GitLab issue in new tab
+    window.open(issue.web_url, '_blank');
   };
 
   const estimatedTime = issue.time_stats?.time_estimate || 0;
@@ -64,19 +102,19 @@ export function KanbanCard({ issue, onClick, className }: KanbanCardProps) {
   return (
     <Card 
       className={cn(
-        "cursor-pointer hover:shadow-md transition-shadow duration-200 border-l-4",
+        "hover:shadow-md transition-shadow duration-200 border-l-4",
         className
       )}
       onClick={handleClick}
       style={borderColor ? { borderLeftColor: borderColor } : undefined}
     >
-      <CardContent className="p-3 space-y-2">
+      <CardContent className="p-3 space-y-2 relative">
         {/* First line - Issue iid */}
         <div className="text-xs text-muted-foreground">
           #{issue.iid}
         </div>
         {/* Second line - Issue title (big font) */}
-        <div className="font-semibold text-sm leading-tight">
+        <div className="font-semibold text-sm leading-tight pr-8">
           {issue.title}
         </div>
         
@@ -130,6 +168,28 @@ export function KanbanCard({ issue, onClick, className }: KanbanCardProps) {
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="w-3 h-3 text-muted-foreground" />
           <span>{formatEstimatedTime(estimatedTime)}</span>
+        </div>
+
+        {/* Action icons - bottom right corner */}
+        <div className="absolute bottom-2 right-2 flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleEyeClick}
+            className="h-6 w-6 p-0 hover:bg-accent"
+            title="View in App"
+          >
+            <Eye className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleGitLabClick}
+            className="h-6 w-6 p-0 hover:bg-accent"
+            title="Open in GitLab"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+          </Button>
         </div>
       </CardContent>
     </Card>

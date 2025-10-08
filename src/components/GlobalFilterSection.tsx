@@ -290,7 +290,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
       
       return true;
     });
-  }, [issues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations, selectedMilestones, selectedCustomFilters]);
+  }, [issues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations, selectedMilestones, selectedEpics, selectedCustomFilters]);
 
   // Create stable onChange handlers
   const handleStatusChange = useCallback((statuses: string[]) => {
@@ -337,7 +337,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
       iterations: selectedIterations,
       milestones: selectedMilestones
     });
-  }, [debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations, selectedMilestones, selectedEpics, selectedCustomFilters, onFilteredDataChange]);
+  }, [filteredIssues, debouncedSearchTerm, selectedStatuses, selectedAssignees, selectedLabels, selectedProjects, selectedIterations, selectedMilestones, selectedEpics, selectedCustomFilters, onFilteredDataChange]);
 
   const clearAllFilters = () => {
     setSearchTerm('');

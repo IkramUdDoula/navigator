@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Tag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Tag, FileText, Clock, Users, FolderOpen, Sparkles, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -18,6 +19,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,8 +59,10 @@ export function CreateIssueForm({
   issues = [],
   onIssueCreated
 }: CreateIssueFormProps) {
+  const navigate = useNavigate();
   const [assigneeSearch, setAssigneeSearch] = useState('');
   const [labelSearch, setLabelSearch] = useState('');
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // API hooks
   const { data: projects = [] } = useGitLabGroupProjects(credentials);
@@ -108,6 +113,26 @@ export function CreateIssueForm({
   //   return () => clearInterval(interval);
   // }, [form]);
 
+  // Helper function to extract project path from GitLab issue URL
+  const getProjectPathFromIssue = (issue: GitLabIssue): string | null => {
+    try {
+      const url = new URL(issue.web_url);
+      const pathParts = url.pathname.split('/');
+      const issueIndex = pathParts.findIndex(part => part === 'issues');
+      
+      if (issueIndex > 0) {
+        // Get the project path (everything before /-/issues)
+        const projectPath = pathParts.slice(1, issueIndex - 1).join('/');
+        return projectPath;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Failed to extract project path from issue URL:', error);
+      return null;
+    }
+  };
+
   // Transform form data to API request format
   const transformFormData = (formData: CreateIssueFormData): CreateIssueRequest => {
     const request: CreateIssueRequest = {
@@ -139,9 +164,23 @@ export function CreateIssueForm({
         description: `"${data.title}" has been created.`,
       });
       
-      // Automatically open the created issue in a new tab
+      // Open the created issue in a new tab
+      console.log('Created issue:', createdIssue);
       if (createdIssue?.web_url) {
-        window.open(createdIssue.web_url, '_blank', 'noopener,noreferrer');
+        console.log('Issue web_url:', createdIssue.web_url);
+        const projectPath = getProjectPathFromIssue(createdIssue);
+        console.log('Extracted project path:', projectPath);
+        if (projectPath) {
+          const navigationUrl = `/issue/${encodeURIComponent(projectPath)}/${createdIssue.iid}?from=/`;
+          const absoluteUrl = `${window.location.origin}${navigationUrl}`;
+          console.log('Opening created issue in new tab:', absoluteUrl);
+          // Open in new tab within the app using absolute URL
+          window.open(absoluteUrl, '_blank');
+        } else {
+          console.warn('Could not extract project path from issue URL:', createdIssue.web_url);
+        }
+      } else {
+        console.warn('Created issue does not have web_url:', createdIssue);
       }
       
       // Reset form
@@ -205,239 +244,469 @@ export function CreateIssueForm({
     );
   }, [allLabels, labelSearch]);
 
+  // Watch form values for character counts
+  const titleValue = form.watch('title') || '';
+  const descriptionValue = form.watch('description') || '';
+
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Create New Issue</h2>
-      
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Two columns layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* First Column */}
-            <div className="space-y-6">
-              {/* 1. Issue Title */}
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Issue Title *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter issue title..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* 2. Estimation */}
-              <FormField
-                control={form.control}
-                name="timeEstimate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estimation (hours)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        placeholder="0"
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          field.onChange(value ? parseFloat(value) : null);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* 3. Project */}
-              <FormField
-                control={form.control}
-                name="projectId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project *</FormLabel>
-                    <FormControl>
-                      <SearchableMultiSelect
-                        options={projectOptions}
-                        selected={field.value ? [field.value.toString()] : []}
-                        onChange={(selected) => {
-                          // Ensure only one project can be selected (single select behavior)
-                          if (selected.length > 0) {
-                            field.onChange(parseInt(selected[selected.length - 1]));
-                          } else {
-                            field.onChange(null);
-                          }
-                        }}
-                        placeholder="Select a project"
-                        className="w-full"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* 4. Assignee */}
-              <FormField
-                control={form.control}
-                name="assigneeIds"
-                render={({ field }) => {
-                  // console.log('Assignee field object:', field);
-                  return (
-                    <FormItem>
-                      <FormLabel>Assignee</FormLabel>
-                      <FormControl>
-                        <div className="flex-1 min-w-[150px] relative">
-                          <SearchableMultiSelect
-                            options={assigneeOptions}
-                            selected={(field.value || []).map(id => id.toString())}
-                            onChange={(selected) => {
-                              // console.log('Assignee selected:', selected);
-                              // console.log('Field value before onChange:', field.value);
-                              const parsed = selected.map(id => parseInt(id));
-                              // console.log('Parsed assignee IDs:', parsed);
-                              field.onChange(parsed);
-                              // console.log('Field value after onChange:', parsed);
-                            }}
-                            placeholder="Select assignees..."
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  );
-                }}
-              />
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 p-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Compact Header */}
+        <div className="flex items-center justify-between mb-4 bg-background/60 backdrop-blur-sm rounded-lg border p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Sparkles className="h-5 w-5 text-primary" />
             </div>
-
-            {/* Second Column */}
-            <div className="space-y-6">
-              {/* 5. Labels */}
-              <FormField
-                control={form.control}
-                name="labels"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Labels</FormLabel>
-                    <FormControl>
-                      <div className="space-y-3">
-                        {/* Search Input */}
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                          <Input
-                            placeholder="Search labels..."
-                            value={labelSearch}
-                            onChange={(e) => setLabelSearch(e.target.value)}
-                            className="pl-9"
-                          />
-                        </div>
-
-                        {/* Label Chips */}
-                        <div className="flex flex-wrap gap-2 p-3 border rounded-md min-h-[2.5rem] max-h-40 overflow-y-auto custom-scrollbar">
-                          {filteredLabels.map((label) => {
-                            const isSelected = (field.value || []).includes(label);
-                            return (
-                              <button
-                                key={label}
-                                type="button"
-                                onClick={() => {
-                                  const current = field.value || [];
-                                  if (isSelected) {
-                                    field.onChange(current.filter(l => l !== label));
-                                  } else {
-                                    field.onChange([...current, label]);
-                                  }
-                                }}
-                                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                                  isSelected
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                                }`}
-                              >
-                                <Tag className="h-3 w-3" />
-                                <span>{label}</span>
-                              </button>
-                            );
-                          })}
-                          {filteredLabels.length === 0 && labelSearch && (
-                            <span className="text-muted-foreground text-sm">No labels found matching "{labelSearch}"</span>
-                          )}
-                          {allLabels.length === 0 && (
-                            <span className="text-muted-foreground text-sm">No labels found in existing issues. Labels will be available after creating issues with labels.</span>
-                          )}
-                        </div>
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      {allLabels.length === 0 
-                        ? "No labels found in existing issues. Labels will be available after creating issues with labels."
-                        : `${allLabels.length} labels available from existing issues.`
-                      }
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* 6. Description */}
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <MarkdownEditor
-                        value={field.value || ''}
-                        onChange={field.onChange}
-                        placeholder="Describe the issue in detail..."
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      You can use Markdown formatting. Supports headings, bold, italic, links, code, and lists.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                Create New Issue
+              </h1>
+              <p className="text-xs text-muted-foreground">Fill in the details to create a new GitLab issue</p>
             </div>
           </div>
+        </div>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Action Panel - Moved to Top */}
+            <div className="bg-background/60 backdrop-blur-sm rounded-lg border p-3 mb-4">
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/')}
+                  className="flex items-center gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Cancel
+                </Button>
+                
+                <div className="flex gap-2">
+                  {showClearConfirm ? (
+                    <div className="flex items-center gap-2 bg-destructive/10 px-2 py-1 rounded-md">
+                      <span className="text-xs text-destructive">Clear all?</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          setAssigneeSearch('');
+                          setLabelSearch('');
+                          form.reset({
+                            title: '',
+                            description: '',
+                            projectId: null,
+                            assigneeIds: [],
+                            labels: [],
+                            timeEstimate: null,
+                          });
+                          setShowClearConfirm(false);
+                        }}
+                      >
+                        Yes
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowClearConfirm(false)}
+                      >
+                        No
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowClearConfirm(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Clear
+                    </Button>
+                  )}
+                  
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={createIssueMutation.isPending}
+                    className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 min-w-[120px]"
+                  >
+                    {createIssueMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" />
+                        Create Issue
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {/* Main Content - Two Column Layout */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Left Column */}
+              <div className="flex flex-col gap-4">
+                {/* Essential Information */}
+                <div className="bg-background/60 backdrop-blur-sm rounded-lg border p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <h2 className="text-sm font-semibold">Essential Info</h2>
+                    <Badge variant="secondary" className="text-xs">Required</Badge>
+                  </div>
+                  <div className="space-y-3">
+                    {/* Issue Title */}
+                    <FormField
+                      control={form.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between">
+                            <FormLabel className="text-xs font-medium">Title *</FormLabel>
+                            <span className={`text-xs ${titleValue.length > 255 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              {titleValue.length}/255
+                            </span>
+                          </div>
+                          <FormControl>
+                            <Input 
+                              placeholder="Enter issue title..." 
+                              className="h-8"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setAssigneeSearch('');
-                form.reset({
-                  title: '',
-                  description: '',
-                  projectId: null,
-                  assigneeIds: [],
-                  labels: [],
-                  timeEstimate: null,
-                });
-              }}
-            >
-              Clear
-            </Button>
-            <Button
-              type="submit"
-              disabled={createIssueMutation.isPending}
-            >
-              {createIssueMutation.isPending ? 'Creating...' : 'Create Issue'}
-            </Button>
-          </div>
-        </form>
-      </Form>
+                    {/* Project Selection */}
+                    <FormField
+                      control={form.control}
+                      name="projectId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-medium">Project *</FormLabel>
+                          <FormControl>
+                            <SearchableMultiSelect
+                              options={projectOptions}
+                              selected={field.value ? [field.value.toString()] : []}
+                              onChange={(selected) => {
+                                if (selected.length > 0) {
+                                  field.onChange(parseInt(selected[selected.length - 1]));
+                                } else {
+                                  field.onChange(null);
+                                }
+                              }}
+                              placeholder="Select project"
+                              className="w-full"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Assignment & Time */}
+                <div className="bg-background/60 backdrop-blur-sm rounded-lg border p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Users className="h-4 w-4 text-primary" />
+                    <h2 className="text-sm font-semibold">Assignment</h2>
+                    <Badge variant="outline" className="text-xs">Optional</Badge>
+                  </div>
+                  <div className="space-y-3">
+
+                    {/* Time Estimation */}
+                    <FormField
+                      control={form.control}
+                      name="timeEstimate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-medium">Time (hours)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              placeholder="0"
+                              className="h-8"
+                              {...field}
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                field.onChange(value ? parseFloat(value) : null);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Assignee */}
+                    <FormField
+                      control={form.control}
+                      name="assigneeIds"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-medium">Assignees</FormLabel>
+                          <FormControl>
+                            <div className="space-y-3">
+                              {/* Search Input */}
+                              <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                                <Input
+                                  placeholder="Search assignees..."
+                                  value={assigneeSearch}
+                                  onChange={(e) => setAssigneeSearch(e.target.value)}
+                                  className="pl-9 h-8"
+                                />
+                              </div>
+
+                              {/* Selected Assignees Display */}
+                              {(field.value || []).length > 0 && (
+                                <div className="space-y-2">
+                                  <span className="text-xs font-medium text-muted-foreground">Selected:</span>
+                                  <div className="flex flex-wrap gap-2 p-3 bg-muted/30 rounded-md border">
+                                    {(field.value || []).map((assigneeId) => {
+                                      const assignee = users.find(user => user.id === assigneeId);
+                                      if (!assignee) return null;
+                                      
+                                      const truncatedName = assignee.name.length > 12 
+                                        ? assignee.name.slice(0, -12) 
+                                        : assignee.name;
+                                      
+                                      return (
+                                        <Badge key={assigneeId} variant="default" className="text-xs h-8 flex items-center gap-2 pl-1">
+                                          <Avatar className="h-5 w-5">
+                                            <AvatarImage src={assignee.avatar_url} alt={assignee.name} />
+                                            <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                                              {assignee.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <span>{truncatedName}</span>
+                                          <X 
+                                            className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                                            onClick={() => {
+                                              const current = field.value || [];
+                                              field.onChange(current.filter(id => id !== assigneeId));
+                                            }}
+                                          />
+                                        </Badge>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Available Assignees */}
+                              <div>
+                                <span className="text-xs font-medium text-muted-foreground mb-2 block">Available Assignees:</span>
+                                <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-background/50">
+                                  {users
+                                    .filter(user => 
+                                      !assigneeSearch.trim() || 
+                                      user.name.toLowerCase().includes(assigneeSearch.toLowerCase())
+                                    )
+                                    .map((user) => {
+                                      const isSelected = (field.value || []).includes(user.id);
+                                      const truncatedName = user.name.length > 12 
+                                        ? user.name.slice(0, -12) 
+                                        : user.name;
+                                      
+                                      return (
+                                        <button
+                                          key={user.id}
+                                          type="button"
+                                          onClick={() => {
+                                            const current = field.value || [];
+                                            if (isSelected) {
+                                              field.onChange(current.filter(id => id !== user.id));
+                                            } else {
+                                              field.onChange([...current, user.id]);
+                                            }
+                                          }}
+                                          className={`inline-flex items-center gap-2 px-2 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                                            isSelected
+                                              ? 'bg-primary text-primary-foreground border-primary'
+                                              : 'bg-background text-foreground border-border hover:bg-muted/50'
+                                          }`}
+                                        >
+                                          <Avatar className="h-5 w-5">
+                                            <AvatarImage src={user.avatar_url} alt={user.name} />
+                                            <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+                                              {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <span>{truncatedName}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  {users.filter(user => 
+                                    !assigneeSearch.trim() || 
+                                    user.name.toLowerCase().includes(assigneeSearch.toLowerCase())
+                                  ).length === 0 && assigneeSearch && (
+                                    <div className="w-full text-center py-4">
+                                      <span className="text-muted-foreground text-xs">No assignees found matching "{assigneeSearch}"</span>
+                                    </div>
+                                  )}
+                                  {users.length === 0 && (
+                                    <div className="w-full text-center py-4">
+                                      <span className="text-muted-foreground text-xs">No assignees available</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="flex flex-col gap-4">
+                {/* Labels */}
+                <div className="bg-background/60 backdrop-blur-sm rounded-lg border p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Tag className="h-4 w-4 text-primary" />
+                    <h2 className="text-sm font-semibold">Labels</h2>
+                    <Badge variant="outline" className="text-xs">Optional</Badge>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="labels"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="space-y-3">
+                          {/* Search Input */}
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                            <Input
+                              placeholder="Search labels..."
+                              value={labelSearch}
+                              onChange={(e) => setLabelSearch(e.target.value)}
+                              className="pl-9 h-8"
+                            />
+                          </div>
+
+                          {/* Selected Labels Display */}
+                          {(field.value || []).length > 0 && (
+                            <div className="space-y-2">
+                              <span className="text-xs font-medium text-muted-foreground">Selected:</span>
+                              <div className="flex flex-wrap gap-2 p-3 bg-muted/30 rounded-md border">
+                                {(field.value || []).map((label) => (
+                                  <Badge key={label} variant="default" className="text-xs h-7 flex items-center gap-1">
+                                    <Tag className="h-3 w-3" />
+                                    <span>{label}</span>
+                                    <X 
+                                      className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                                      onClick={() => {
+                                        const current = field.value || [];
+                                        field.onChange(current.filter(l => l !== label));
+                                      }}
+                                    />
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Available Labels */}
+                          <div>
+                            <span className="text-xs font-medium text-muted-foreground mb-2 block">Available Labels:</span>
+                            <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-background/50">
+                              {filteredLabels.map((label) => {
+                                const isSelected = (field.value || []).includes(label);
+                                return (
+                                  <button
+                                    key={label}
+                                    type="button"
+                                    onClick={() => {
+                                      const current = field.value || [];
+                                      if (isSelected) {
+                                        field.onChange(current.filter(l => l !== label));
+                                      } else {
+                                        field.onChange([...current, label]);
+                                      }
+                                    }}
+                                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                                      isSelected
+                                        ? 'bg-primary text-primary-foreground border-primary'
+                                        : 'bg-background text-foreground border-border hover:bg-muted/50'
+                                    }`}
+                                  >
+                                    <Tag className="h-3 w-3" />
+                                    <span>{label}</span>
+                                  </button>
+                                );
+                              })}
+                              {filteredLabels.length === 0 && labelSearch && (
+                                <div className="w-full text-center py-4">
+                                  <span className="text-muted-foreground text-xs">No labels found matching "{labelSearch}"</span>
+                                </div>
+                              )}
+                              {allLabels.length === 0 && (
+                                <div className="w-full text-center py-4">
+                                  <span className="text-muted-foreground text-xs">No labels available from existing issues</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Description Section */}
+                <div className="bg-background/60 backdrop-blur-sm rounded-lg border p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <h2 className="text-sm font-semibold">Description</h2>
+                    <Badge variant="outline" className="text-xs">Optional</Badge>
+                  </div>
+                  
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between mb-2">
+                          <FormLabel className="text-xs font-medium">Description</FormLabel>
+                          <span className="text-xs text-muted-foreground">
+                            {descriptionValue.length} chars
+                          </span>
+                        </div>
+                        <FormControl>
+                          <MarkdownEditor
+                            value={field.value || ''}
+                            onChange={field.onChange}
+                            placeholder="Describe the issue in detail..."
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
+          </form>
+        </Form>
+      </div>
     </div>
   );
 }

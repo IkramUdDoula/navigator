@@ -73,6 +73,18 @@ export interface GitLabIteration {
   description?: string;
 }
 
+export interface GitLabEpic {
+  id: number;
+  title: string;
+  description?: string;
+  state: 'opened' | 'closed';
+  created_at: string;
+  updated_at: string;
+  start_date?: string;
+  due_date?: string;
+  web_url: string;
+}
+
 export interface GitLabBoard {
   id: number;
   name: string;
@@ -127,6 +139,7 @@ export interface CreateIssueRequest {
   weight?: number;
   time_estimate?: number;
   state_event?: 'close' | 'reopen';
+  iteration_id?: number;
 }
 
 // Form data interface for the create issue form

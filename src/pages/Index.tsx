@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthForm } from '@/components/AuthForm';
 import { Header } from '@/components/Header';
 import { TabNavigation, TabType } from '@/components/TabNavigation';
@@ -16,6 +17,7 @@ import { GitLabCredentials, GitLabIssue } from '@/types/gitlab';
 const INACTIVITY_THRESHOLD = 5 * 60 * 1000; // 5 minutes
 
 const Index = () => {
+  const navigate = useNavigate();
   const [credentials, setCredentials] = useLocalStorage<GitLabCredentials | null>('gitlab-credentials', null);
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
   const [activeTab, setActiveTab] = useState<TabType>('issues');
@@ -25,6 +27,26 @@ const Index = () => {
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]); // Track selected assignees
   const [selectedIterations, setSelectedIterations] = useState<string[]>([]); // Track selected iterations
   const [lastActiveTime, setLastActiveTime] = useLocalStorage<number>('last-active-time', Date.now());
+
+  // Helper function to extract project path from GitLab issue URL
+  const getProjectPathFromIssue = (issue: GitLabIssue): string | null => {
+    try {
+      const url = new URL(issue.web_url);
+      const pathParts = url.pathname.split('/');
+      const issueIndex = pathParts.findIndex(part => part === 'issues');
+      
+      if (issueIndex > 0) {
+        // Get the project path (everything before /-/issues)
+        const projectPath = pathParts.slice(1, issueIndex - 1).join('/');
+        return projectPath;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Failed to extract project path from issue URL:', error);
+      return null;
+    }
+  };
 
   // Apply theme to document
   useEffect(() => {
@@ -49,13 +71,12 @@ const Index = () => {
     const interval = setInterval(() => {
       setLastActiveTime(Date.now());
     }, 60000); // Update every minute
-    
     return () => clearInterval(interval);
   }, [lastActiveTime, credentials, setLastActiveTime]);
 
   const currentCredentials = credentials ? { ...credentials, groupId: groupPath } : null;
 
-  // Fetch issues with enhanced status resolution
+  // Fetch issues with enhanced status resolution - with real-time updates via React Query polling
   const { data: issues = [], isLoading: issuesLoading, refetch: refetchIssues } = useGitLabIssuesWithEnhancedStatus(currentCredentials);
   const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useGitLabUsers(currentCredentials);
 
@@ -195,8 +216,11 @@ const Index = () => {
         return <IterationKanbanBoard 
           issues={issuesToShow}
           onIssueClick={(issue) => {
-            // Open issue URL in new tab
-            window.open(issue.web_url, '_blank');
+            // Navigate to issue detail page within the app
+            const projectPath = getProjectPathFromIssue(issue);
+            if (projectPath) {
+              navigate(`/issue/${encodeURIComponent(projectPath)}/${issue.iid}?from=/`);
+            }
           }}
         />;
         

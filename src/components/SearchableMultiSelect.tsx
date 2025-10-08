@@ -79,18 +79,13 @@ export function SearchableMultiSelect({
     e.preventDefault();
     onChange(selected.filter((item) => item !== value));
   };
-
   // Memoize the selected options to prevent unnecessary re-renders
   const selectedOptions = React.useMemo(() => {
     return selected.map(value => optionsMap.get(value)).filter(Boolean) as Option[];
   }, [selected, optionsMap]);
 
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
-  };
-
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"

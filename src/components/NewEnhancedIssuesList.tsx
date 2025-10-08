@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { GitLabIssue } from '@/types/gitlab';
 import { groupIssues, GroupingCategory, GroupedIssues, getGroupMetadata } from '@/lib/newGroupingUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, ChevronRight, ChevronDown, Calendar, User, Tag, Link, Clock, MessageSquare, FileText, PlusCircle } from 'lucide-react';
+import { ExternalLink, ChevronRight, ChevronDown, Calendar, User, Tag, Link, Clock, MessageSquare, FileText, PlusCircle, Eye } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import StatusBadge from '@/components/StatusBadge';
@@ -237,12 +238,50 @@ const IssueDetails = ({ issue }: { issue: GitLabIssue }) => {
 };
 
 export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesListProps) {
+  const navigate = useNavigate();
   const [selectedGrouping, setSelectedGrouping] = useState<GroupingCategory[]>([]);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedIssues, setExpandedIssues] = useState<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [groupPagination, setGroupPagination] = useState<Record<string, number>>({});
   const issuesPerPage = 20;
+
+  // Helper function to extract project ID from issue URL
+  const getProjectIdFromIssue = (issue: GitLabIssue): string | null => {
+    try {
+      const url = new URL(issue.web_url);
+      const pathParts = url.pathname.split('/');
+      const issueIndex = pathParts.findIndex(part => part === 'issues');
+      
+      if (issueIndex > 0) {
+        // Get the project path (everything before /-/issues)
+        const projectPath = pathParts.slice(1, issueIndex - 1).join('/');
+        return projectPath;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Failed to extract project ID from issue URL:', error);
+      return null;
+    }
+  };
+
+  // Navigate to issue detail page in new tab
+  const navigateToIssue = (issue: GitLabIssue) => {
+    console.log('Opening issue in new tab:', issue);
+    console.log('Issue web_url:', issue.web_url);
+    const projectPath = getProjectIdFromIssue(issue);
+    console.log('Extracted project path:', projectPath);
+    if (projectPath) {
+      const navigationUrl = `/issue/${encodeURIComponent(projectPath)}/${issue.iid}?from=/`;
+      const absoluteUrl = `${window.location.origin}${navigationUrl}`;
+      console.log('Opening in new tab:', absoluteUrl);
+      // Open in new tab within the app using absolute URL
+      window.open(absoluteUrl, '_blank');
+    } else {
+      console.warn('Could not extract project path from issue URL:', issue.web_url);
+    }
+  };
 
   // Toggle a grouping option
   const toggleGroupingOption = (optionId: GroupingCategory) => {
@@ -435,10 +474,20 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
                   <React.Fragment key={issue.id}>
                     <TableRow 
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => toggleIssue(issue.id)}
+                      onClick={() => navigateToIssue(issue)}
                     >
                       <TableCell>
-                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleIssue(issue.id);
+                          }}
+                          className="p-1 h-6 w-6"
+                        >
+                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </Button>
                       </TableCell>
                       <TableCell className="font-medium">#{issue.iid}</TableCell>
                       <TableCell className="max-w-xs truncate">{issue.title}</TableCell>
@@ -650,10 +699,20 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
                     <React.Fragment key={issue.id}>
                       <TableRow 
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => toggleIssue(issue.id)}
+                        onClick={() => navigateToIssue(issue)}
                       >
                         <TableCell>
-                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleIssue(issue.id);
+                            }}
+                            className="p-0 h-6 w-6"
+                          >
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
                         </TableCell>
                         <TableCell className="font-medium">#{issue.iid}</TableCell>
                         <TableCell className="max-w-xs truncate">{issue.title}</TableCell>
