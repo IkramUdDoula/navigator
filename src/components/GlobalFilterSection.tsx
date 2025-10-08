@@ -78,22 +78,21 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     });
     return Array.from(iterations.values()).sort((a, b) => a.title.localeCompare(b.title));
   }, [issues]);
-
   // Extract just the iteration titles for backward compatibility
   const allIterations = useMemo(() => {
     return allIterationsWithDates.map(iteration => iteration.title);
   }, [allIterationsWithDates]);
 
-  // Create iteration options including the "Backlog" option
+  // Create iteration options including the "Unassigned" option
   const iterationOptions = useMemo(() => {
-    // Add "Backlog" as a special option for issues with no iteration
+    // Add "Unassigned" as a special option for issues with no iteration
     const options = allIterations.map(iteration => ({
       value: iteration,
       label: iteration
     }));
     
-    // Add Backlog option at the beginning
-    options.unshift({ value: 'Backlog', label: 'Backlog' });
+    // Add Unassigned option at the beginning
+    options.unshift({ value: 'unassigned', label: 'Unassigned' });
     
     return options;
   }, [allIterations]);
@@ -211,15 +210,15 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
       
       // Iteration filter
       if (selectedIterations.length > 0) {
-        // Handle special "Backlog" case - issues with no iteration assigned that are open
-        if (selectedIterations.includes('Backlog')) {
-          // If "Backlog" is selected, include issues that either:
-          // 1. Have no iteration and are open (backlog items), OR
+        // Handle special "unassigned" case - issues with no iteration assigned
+        if (selectedIterations.includes('unassigned')) {
+          // If "unassigned" is selected, include issues that either:
+          // 1. Have no iteration assigned (unassigned items), OR
           // 2. Match any of the other selected iterations
-          const isBacklogItem = !issue.iteration?.title && issue.state === 'opened';
+          const isUnassignedItem = !issue.iteration?.title;
           const matchesOtherIterations = issue.iteration?.title && selectedIterations.includes(issue.iteration.title);
           
-          if (!isBacklogItem && !matchesOtherIterations) {
+          if (!isUnassignedItem && !matchesOtherIterations) {
             return false;
           }
         } else {
@@ -349,11 +348,11 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
 
   const showNoIterationIssues = selectedIterations.length > 0 && 
     !issues.some(issue => {
-      if (selectedIterations.includes('Backlog')) {
-        // For backlog, check if there are issues with no iteration that are open
-        const isBacklogItem = !issue.iteration?.title && issue.state === 'opened';
+      if (selectedIterations.includes('unassigned')) {
+        // For unassigned, check if there are issues with no iteration
+        const isUnassignedItem = !issue.iteration?.title;
         const matchesOtherIterations = issue.iteration?.title && selectedIterations.includes(issue.iteration.title);
-        return isBacklogItem || matchesOtherIterations;
+        return isUnassignedItem || matchesOtherIterations;
       }
       return selectedIterations.some(iteration => issue.iteration?.title === iteration);
     });
