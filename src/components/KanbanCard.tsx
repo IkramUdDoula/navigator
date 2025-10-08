@@ -70,6 +70,16 @@ export function KanbanCard({ issue, onClick, className }: KanbanCardProps) {
     }
   };
 
+  const getProjectName = (issue: GitLabIssue): string | null => {
+    const projectPath = getProjectIdFromIssue(issue);
+    if (projectPath) {
+      // Extract just the project name (last part after the last slash)
+      const parts = projectPath.split('/');
+      return parts[parts.length - 1];
+    }
+    return null;
+  };
+
   const handleClick = () => {
     // Card click does nothing - only icons trigger actions
   };
@@ -109,9 +119,12 @@ export function KanbanCard({ issue, onClick, className }: KanbanCardProps) {
       style={borderColor ? { borderLeftColor: borderColor } : undefined}
     >
       <CardContent className="p-3 space-y-2 relative">
-        {/* First line - Issue iid */}
-        <div className="text-xs text-muted-foreground">
-          #{issue.iid}
+        {/* First line - Project name and Issue iid */}
+        <div className="text-xs text-muted-foreground flex items-center gap-1">
+          <span className="font-medium" style={{ fontSize: '0.65rem' }}>
+            {getProjectName(issue) || 'Unknown'}
+          </span>
+          <span>#{issue.iid}</span>
         </div>
         {/* Second line - Issue title (big font) */}
         <div className="font-semibold text-sm leading-tight pr-8">

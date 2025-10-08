@@ -268,44 +268,12 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
 
   // Navigate to issue detail page in new tab
   const navigateToIssue = (issue: GitLabIssue) => {
-    console.log('🔗 NewEnhancedIssuesList - Opening issue:', {
-      issue: {
-        id: issue.id,
-        iid: issue.iid,
-        title: issue.title,
-        web_url: issue.web_url
-      },
-      timestamp: new Date().toISOString()
-    });
-    
     const projectPath = getProjectIdFromIssue(issue);
-    console.log('🔍 Project path extraction:', {
-      originalUrl: issue.web_url,
-      extractedPath: projectPath,
-      urlParts: issue.web_url ? new URL(issue.web_url).pathname.split('/') : null
-    });
-    
     if (projectPath) {
       const encodedProjectPath = encodeURIComponent(projectPath);
       const navigationUrl = `/issue/${encodedProjectPath}/${issue.iid}?from=/`;
       const absoluteUrl = `${window.location.origin}${navigationUrl}`;
-      
-      console.log('🎯 Navigation details:', {
-        projectPath,
-        encodedProjectPath,
-        navigationUrl,
-        absoluteUrl,
-        issueIid: issue.iid
-      });
-      
-      // Open in new tab within the app using absolute URL
       window.open(absoluteUrl, '_blank');
-    } else {
-      console.error('❌ Could not extract project path from issue URL:', {
-        web_url: issue.web_url,
-        issue_id: issue.id,
-        issue_iid: issue.iid
-      });
     }
   };
 

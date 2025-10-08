@@ -47,6 +47,15 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
   // Parse URL parameters
   const decodedProjectPath = projectId ? decodeURIComponent(projectId) : null;
   const parsedIssueIid = issueIid ? parseInt(issueIid, 10) : null;
+
+  // Helper function to extract project name from project path
+  const getProjectName = (projectPath: string | null): string | null => {
+    if (projectPath) {
+      const parts = projectPath.split('/');
+      return parts[parts.length - 1];
+    }
+    return null;
+  };
   
   // State for editing mode
   const [isEditing, setIsEditing] = useState(false);
@@ -69,60 +78,6 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
   // Fetch data
   const { data: issue, isLoading, error, refetch } = useGitLabIssue(credentials, decodedProjectPath, parsedIssueIid);
   
-  // Enhanced debugging for URL parsing and routing
-  console.log('🔍 IssueDetailPage Debug:', {
-    rawParams: { projectId, issueIid },
-    decodedProjectPath,
-    parsedIssueIid,
-    credentials: !!credentials,
-    credentialsHost: credentials?.host,
-    credentialsGroupId: credentials?.groupId,
-    urlInfo: {
-      pathname: location.pathname,
-      search: location.search,
-      href: location.href
-    },
-    queryParams: {
-      sourceTab,
-      shouldStartEditing
-    },
-    issueData: issue ? {
-      id: issue.id,
-      iid: issue.iid,
-      title: issue.title,
-      state: issue.state,
-      web_url: issue.web_url
-    } : null,
-    loadingState: { isLoading, hasError: !!error },
-    error: error?.message,
-    timestamp: new Date().toISOString()
-  });
-
-  // Log when parameters change
-  useEffect(() => {
-    console.log('📍 Route parameters changed:', {
-      projectId,
-      issueIid,
-      decodedProjectPath,
-      parsedIssueIid
-    });
-  }, [projectId, issueIid, decodedProjectPath, parsedIssueIid]);
-
-  // Log when issue data loads successfully
-  useEffect(() => {
-    if (issue && !isLoading && !error) {
-      console.log('🎉 Issue loaded successfully!', {
-        issueId: issue.id,
-        issueIid: issue.iid,
-        title: issue.title,
-        state: issue.state,
-        projectPath: decodedProjectPath,
-        assignees: issue.assignees?.length || 0,
-        labels: issue.labels?.length || 0,
-        milestone: issue.milestone?.title || 'None'
-      });
-    }
-  }, [issue, isLoading, error, decodedProjectPath]);
   const { data: users = [] } = useGitLabUsers(credentials);
   const { data: milestones = [] } = useGitLabGroupMilestones(credentials);
   const { data: projectLabels = [] } = useGitLabProjectLabels(credentials);
@@ -467,11 +422,16 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
               <div className="flex items-center gap-2">
                 <Badge 
                   variant={issue.state === 'opened' ? 'default' : 'secondary'}
-                  className={`${issue.state === 'opened' ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500'} text-white font-medium`}
+                  className={`${issue.state === 'opened' ? 'bg-stone-900 hover:bg-green-600' : 'bg-gray-500'} text-white font-medium`}
                 >
                   {issue.state === 'opened' ? 'Open' : 'Closed'}
                 </Badge>
-                <span className="text-sm font-mono text-muted-foreground">#{issue.iid}</span>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <span className="font-medium" style={{ fontSize: '0.8rem' }}>
+                    {getProjectName(decodedProjectPath) || 'Unknown'}
+                  </span>
+                  <span className="font-mono">#{issue.iid}</span>
+                </div>
               </div>
             </div>
             
@@ -632,15 +592,15 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
                 Issue Summary
               </h2>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                {/* <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Status</span>
                   <Badge 
                     variant={issue.state === 'opened' ? 'default' : 'secondary'}
-                    className={`${issue.state === 'opened' ? 'bg-green-500' : 'bg-gray-500'} text-white text-xs`}
+                    className={`${issue.state === 'opened' ? 'bg-stone-900' : 'bg-gray-500'} text-white text-xs`}
                   >
                     {issue.state === 'opened' ? 'Open' : 'Closed'}
                   </Badge>
-                </div>
+                </div> */}
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">Created</span>
                   <span className="text-xs">{formatDate(issue.created_at)}</span>
