@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GitLabIssue } from '@/types/gitlab';
 import { groupIssues, GroupingCategory, GroupedIssues, getGroupMetadata } from '@/lib/newGroupingUtils';
@@ -9,6 +9,7 @@ import { ExternalLink, ChevronRight, ChevronDown, Calendar, User, Tag, Link, Clo
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import StatusBadge from '@/components/StatusBadge';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import {
   Pagination,
   PaginationContent,
@@ -32,14 +33,18 @@ const GROUPING_OPTIONS: { id: GroupingCategory; label: string }[] = [
   { id: 'epic', label: 'Epic/Parent' },
 ];
 
-// Component to display expanded issue details with professional vertical timeline UI
+// Component to display expanded issue details in clean 3-column layout
 const IssueDetails = ({ issue }: { issue: GitLabIssue }) => {
-  // Generate timeline events from issue data
-  const timelineEvents = useMemo(() => {
+  // Get label colors from localStorage
+  const [labelColors] = useLocalStorage<Record<string, string>>('label-colors', {});
+  const defaultLabelColor = '#6c757d'; // Gray color as default
+  
+  // Generate activity log events from issue data
+  const activityEvents = useMemo(() => {
     const events = [
       {
         id: 'created',
-        icon: <PlusCircle className="h-4 w-4" />,
+        icon: <PlusCircle className="h-3 w-3" />,
         title: 'Issue Created',
         description: `Created by ${issue.author?.name || issue.author?.username || 'Unknown'}`,
         date: issue.created_at,
@@ -47,7 +52,7 @@ const IssueDetails = ({ issue }: { issue: GitLabIssue }) => {
       },
       {
         id: 'updated',
-        icon: <FileText className="h-4 w-4" />,
+        icon: <FileText className="h-3 w-3" />,
         title: 'Last Updated',
         description: 'Issue was last modified',
         date: issue.updated_at,
@@ -59,7 +64,7 @@ const IssueDetails = ({ issue }: { issue: GitLabIssue }) => {
     if (issue.labels && issue.labels.length > 0) {
       events.push({
         id: 'labels',
-        icon: <Tag className="h-4 w-4" />,
+        icon: <Tag className="h-3 w-3" />,
         title: 'Labels Added',
         description: issue.labels.join(', '),
         date: issue.created_at,
@@ -71,165 +76,160 @@ const IssueDetails = ({ issue }: { issue: GitLabIssue }) => {
     if (issue.assignees && issue.assignees.length > 0) {
       events.push({
         id: 'assignee',
-        icon: <User className="h-4 w-4" />,
-        title: 'Assignee',
+        icon: <User className="h-3 w-3" />,
+        title: 'Assigned',
         description: issue.assignees.map(a => a.name || a.username).join(', '),
         date: issue.created_at,
         type: 'assignee'
       });
     }
 
-    // Sort events by date (newest first)
-    return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Sort events by date (oldest first as requested)
+    return events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [issue]);
 
   return (
-    <div className="mt-2 p-4 bg-muted/50 rounded-lg border border-muted">
-      {/* Full issue title */}
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold">{issue.title}</h3>
+    <div className="mt-2 p-3 bg-muted/30 rounded-lg border border-muted">
+      {/* Issue title */}
+      <div className="mb-3 pb-2 border-b border-muted">
+        <h3 className="text-base font-medium">{issue.title}</h3>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column - Timeline */}
-        <div className="lg:col-span-2">
-          <div className="relative">
-            {/* Vertical line */}
-            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border"></div>
-            
-            {/* Timeline events */}
-            <ul className="space-y-6">
-              {timelineEvents.map((event, index) => (
-                <li key={event.id} className="relative pl-12">
-                  {/* Icon */}
-                  <div className="absolute left-0 top-0 flex items-center justify-center w-8 h-8 rounded-full bg-background border border-border shadow-sm">
-                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary">
-                      {event.icon}
-                    </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Column 1 - Activity Log */}
+        <div className="space-y-2">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Activity Log</h4>
+          <div className="space-y-2">
+            {activityEvents.map((event) => (
+              <div key={event.id} className="flex items-start gap-2 p-2 bg-background/50 rounded border">
+                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary flex-shrink-0 mt-0.5">
+                  {event.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium">{event.title}</div>
+                  <div className="text-xs text-muted-foreground truncate">{event.description}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {new Date(event.date).toLocaleDateString()}
                   </div>
-                  
-                  {/* Content */}
-                  <div className="bg-background p-4 rounded-lg border shadow-sm">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-medium">{event.title}</h4>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(event.date).toLocaleDateString()} at {new Date(event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
         
-        {/* Right column - Issue details */}
-        <div className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-center">
-              <Calendar className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-              <div>
-                <span className="text-xs text-muted-foreground">Created</span>
-                <div className="font-medium text-sm">
-                  {new Date(issue.created_at).toLocaleDateString()} at {new Date(issue.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center">
-              <Clock className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-              <div>
-                <span className="text-xs text-muted-foreground">Updated</span>
-                <div className="font-medium text-sm">
-                  {new Date(issue.updated_at).toLocaleDateString()} at {new Date(issue.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center">
-              <User className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-              <div>
-                <span className="text-xs text-muted-foreground">Author</span>
-                <div className="font-medium text-sm">
-                  {issue.author?.name || issue.author?.username || 'Unknown'}
-                </div>
-              </div>
-            </div>
-            
-            {issue.assignees && issue.assignees.length > 0 && (
-              <div className="flex items-start">
-                <User className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <span className="text-xs text-muted-foreground">Assignee{issue.assignees.length > 1 ? 's' : ''}</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {issue.assignees.map((assignee, index) => (
-                      <div key={index} className="flex items-center bg-background rounded-full pl-1 pr-2 py-0.5 border">
-                        <Avatar className="h-5 w-5 mr-1">
-                          {assignee.avatar_url ? (
-                            <AvatarImage src={assignee.avatar_url} />
-                          ) : (
-                            <AvatarFallback className="text-xs">
-                              {assignee.name?.charAt(0) || assignee.username?.charAt(0) || 'U'}
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
-                        <span className="text-xs">{assignee.name || assignee.username}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {issue.labels && issue.labels.length > 0 && (
-              <div className="flex items-start">
-                <Tag className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <span className="text-xs text-muted-foreground">Labels</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {issue.labels.map((label, index) => (
-                      <div key={index} className="inline-flex items-center rounded-full border border-black px-2.5 py-0.5 text-xs font-medium">
-                        {label}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {(issue.parent || issue.epic) && (
-              <div className="flex items-start">
-                <Link className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <span className="text-xs text-muted-foreground">Linked Issues</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {issue.parent && (
-                      <div className="inline-flex items-center rounded-full border border-black px-2.5 py-0.5 text-xs font-medium">
-                        Parent: {issue.parent.title}
-                      </div>
-                    )}
-                    {issue.epic && (
-                      <div className="inline-flex items-center rounded-full border border-black px-2.5 py-0.5 text-xs font-medium">
-                        Epic: {issue.epic.title}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Column 2 - Issue Metadata */}
+        <div className="space-y-3">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Details</h4>
           
-          {issue.description && (
-            <div>
-              <div className="flex items-center mb-2">
-                <MessageSquare className="h-4 w-4 mr-2 text-muted-foreground" />
-                <h4 className="text-sm font-medium">Description</h4>
-              </div>
-              <div className="bg-background p-3 rounded-lg border text-sm prose prose-sm max-w-none">
-                {issue.description.length > 300 ? `${issue.description.substring(0, 300)}...` : issue.description}
+          {/* Created By */}
+          <div className="space-y-1">
+            <div className="text-xs text-muted-foreground">Created By</div>
+            <div className="text-sm">{issue.author?.name || issue.author?.username || 'Unknown'}</div>
+          </div>
+
+          {/* Assignees */}
+          {issue.assignees && issue.assignees.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-xs text-muted-foreground">Assignee{issue.assignees.length > 1 ? 's' : ''}</div>
+              <div className="flex flex-wrap gap-1">
+                {issue.assignees.map((assignee, index) => (
+                  <div key={index} className="flex items-center bg-background rounded-full pl-1 pr-2 py-0.5 border text-xs">
+                    <Avatar className="h-4 w-4 mr-1">
+                      {assignee.avatar_url ? (
+                        <AvatarImage src={assignee.avatar_url} />
+                      ) : (
+                        <AvatarFallback className="text-xs">
+                          {assignee.name?.charAt(0) || assignee.username?.charAt(0) || 'U'}
+                        </AvatarFallback>
+                      )}
+                    </Avatar>
+                    <span>{assignee.name || assignee.username}</span>
+                  </div>
+                ))}
               </div>
             </div>
+          )}
+
+          {/* Epic/Parent */}
+          {(issue.parent || issue.epic) && (
+            <div className="space-y-1">
+              <div className="text-xs text-muted-foreground">Epic/Parent</div>
+              <div className="space-y-1">
+                {issue.epic && (
+                  <div className="text-xs bg-background px-2 py-1 rounded border">
+                    Epic: {issue.epic.title}
+                  </div>
+                )}
+                {issue.parent && (
+                  <div className="text-xs bg-background px-2 py-1 rounded border">
+                    Parent: {issue.parent.title}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Milestone */}
+          {issue.milestone && (
+            <div className="space-y-1">
+              <div className="text-xs text-muted-foreground">Milestone</div>
+              <div className="text-sm">{issue.milestone.title}</div>
+            </div>
+          )}
+
+          {/* Iteration */}
+          {issue.iteration && (
+            <div className="space-y-1">
+              <div className="text-xs text-muted-foreground">Iteration</div>
+              <div className="text-sm">{issue.iteration.title}</div>
+            </div>
+          )}
+
+          {/* Labels */}
+          {issue.labels && issue.labels.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-xs text-muted-foreground">Labels</div>
+              <div className="flex flex-wrap gap-1">
+                {issue.labels.map((label, index) => {
+                  const labelColor = labelColors[label] || defaultLabelColor;
+                  const isLightColor = (color: string) => {
+                    const hex = color.replace('#', '');
+                    const r = parseInt(hex.substr(0, 2), 16);
+                    const g = parseInt(hex.substr(2, 2), 16);
+                    const b = parseInt(hex.substr(4, 2), 16);
+                    const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                    return brightness > 155;
+                  };
+                  const textColor = isLightColor(labelColor) ? '#000000' : '#ffffff';
+                  
+                  return (
+                    <Badge 
+                      key={index} 
+                      variant="secondary" 
+                      className="text-xs px-2 py-0.5 border-0"
+                      style={{ 
+                        backgroundColor: labelColor,
+                        color: textColor
+                      }}
+                    >
+                      {label}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Column 3 - Description */}
+        <div className="space-y-2">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Description</h4>
+          {issue.description ? (
+            <div className="bg-background/50 p-3 rounded border text-sm leading-relaxed">
+              {issue.description.length > 400 ? `${issue.description.substring(0, 400)}...` : issue.description}
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground italic">No description provided</div>
           )}
         </div>
       </div>
@@ -245,6 +245,29 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
   const [currentPage, setCurrentPage] = useState(1);
   const [groupPagination, setGroupPagination] = useState<Record<string, number>>({});
   const issuesPerPage = 20;
+  
+  // Get label colors from localStorage
+  const [labelColors] = useLocalStorage<Record<string, string>>('label-colors', {});
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const defaultLabelColor = '#6c757d'; // Gray color as default
+  
+  // Listen for label color updates
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'label-colors-last-updated') {
+        setLastUpdated(e.newValue);
+      }
+    };
+
+    // Check for initial update timestamp
+    const initialTimestamp = localStorage.getItem('label-colors-last-updated');
+    if (initialTimestamp) {
+      setLastUpdated(initialTimestamp);
+    }
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Helper function to extract project ID from issue URL
   const getProjectIdFromIssue = (issue: GitLabIssue): string | null => {

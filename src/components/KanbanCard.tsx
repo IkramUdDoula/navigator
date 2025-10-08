@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Clock, User, Tag, Flag, Hash, ExternalLink, Eye } from 'lucide-react';
 import { GitLabIssue } from '@/types/gitlab';
 import { cn } from '@/lib/utils';

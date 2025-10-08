@@ -44,6 +44,11 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
   const [storedCredentials] = useLocalStorage<GitLabCredentials | null>('gitlab-credentials', null);
   const credentials = propCredentials || storedCredentials;
   
+  // Get label colors from localStorage
+  const [labelColors] = useLocalStorage<Record<string, string>>('label-colors', {});
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const defaultLabelColor = '#6c757d'; // Gray color as default
+  
   // Parse URL parameters
   const decodedProjectPath = projectId ? decodeURIComponent(projectId) : null;
   const parsedIssueIid = issueIid ? parseInt(issueIid, 10) : null;
@@ -138,6 +143,24 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
       setIsEditing(true);
     }
   }, [shouldStartEditing, issue, isEditing]);
+
+  // Listen for label color updates
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'label-colors-last-updated') {
+        setLastUpdated(e.newValue);
+      }
+    };
+
+    // Check for initial update timestamp
+    const initialTimestamp = localStorage.getItem('label-colors-last-updated');
+    if (initialTimestamp) {
+      setLastUpdated(initialTimestamp);
+    }
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Real-time updates are handled by React Query polling (configured in the hook)
 
@@ -751,11 +774,32 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {issue.labels.length > 0 ? (
-                      issue.labels.map(label => (
-                        <Badge key={label} variant="secondary" className="text-xs">
-                          {label}
-                        </Badge>
-                      ))
+                      issue.labels.map(label => {
+                        const labelColor = labelColors[label] || defaultLabelColor;
+                        const isLightColor = (color: string) => {
+                          const hex = color.replace('#', '');
+                          const r = parseInt(hex.substr(0, 2), 16);
+                          const g = parseInt(hex.substr(2, 2), 16);
+                          const b = parseInt(hex.substr(4, 2), 16);
+                          const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                          return brightness > 155;
+                        };
+                        const textColor = isLightColor(labelColor) ? '#000000' : '#ffffff';
+                        
+                        return (
+                          <Badge 
+                            key={label} 
+                            variant="secondary" 
+                            className="text-xs border-0"
+                            style={{ 
+                              backgroundColor: labelColor,
+                              color: textColor
+                            }}
+                          >
+                            {label}
+                          </Badge>
+                        );
+                      })
                     ) : (
                       <p className="text-sm text-muted-foreground">No labels</p>
                     )}
