@@ -60,6 +60,29 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
+  // Debug theme application in production
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedTheme = window.localStorage.getItem('theme');
+    const isDarkApplied = document.documentElement.classList.contains('dark');
+    const payload = {
+      storedTheme,
+      hookThemeValue: theme,
+      isDarkApplied,
+      classList: Array.from(document.documentElement.classList),
+      timestamp: new Date().toISOString(),
+      hasDocument: typeof document !== 'undefined',
+    };
+
+    window.localStorage.setItem('theme-debug:last-issue-detail-visit', JSON.stringify(payload));
+
+    if (import.meta.env.PROD) {
+      console.info('[Navigator][ThemeDebug][IssueDetailPage]', payload);
+    } else {
+      console.debug('[Navigator][ThemeDebug][IssueDetailPage]', payload);
+    }
+  }, [theme]);
+
   // Helper function to extract project name from project path
   const getProjectName = (projectPath: string | null): string | null => {
     if (projectPath) {
