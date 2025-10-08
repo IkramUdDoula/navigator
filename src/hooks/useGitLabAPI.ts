@@ -7,20 +7,74 @@ const createGitLabClient = (credentials: GitLabCredentials) => {
   const baseURL = credentials.host.replace(/\/$/, '');
   
   const makeRequest = async <T>(endpoint: string, method: 'GET' | 'POST' | 'PUT' = 'GET', body?: any): Promise<T> => {
-    const response = await fetch(`${baseURL}/api/v4${endpoint}`, {
+    const fullUrl = `${baseURL}/api/v4${endpoint}`;
+    
+    console.log('🌐 GitLab API Request:', {
       method,
-      headers: {
-        'Authorization': `Bearer ${credentials.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
+      url: fullUrl,
+      endpoint,
+      hasToken: !!credentials.token,
+      tokenPrefix: credentials.token ? credentials.token.substring(0, 8) + '...' : 'none'
     });
-    
-    if (!response.ok) {
-      throw new Error(`GitLab API Error: ${response.status} ${response.statusText}`);
+
+    try {
+      const response = await fetch(fullUrl, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${credentials.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      
+      console.log('📡 GitLab API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: fullUrl
+      });
+      
+      if (!response.ok) {
+        let errorMessage = `GitLab API Error: ${response.status} ${response.statusText}`;
+        
+        try {
+          const errorBody = await response.text();
+          console.error('❌ GitLab API Error Body:', errorBody);
+          
+          // Try to parse as JSON for more detailed error info
+          try {
+            const errorJson = JSON.parse(errorBody);
+            if (errorJson.message) {
+              errorMessage += ` - ${errorJson.message}`;
+            }
+          } catch {
+            // If not JSON, include the raw error text
+            if (errorBody) {
+              errorMessage += ` - ${errorBody.substring(0, 200)}`;
+            }
+          }
+        } catch (bodyError) {
+          console.error('Failed to read error response body:', bodyError);
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      const result = await response.json();
+      console.log('✅ GitLab API Success:', {
+        endpoint,
+        dataType: Array.isArray(result) ? `array[${result.length}]` : typeof result
+      });
+      
+      return result;
+    } catch (error) {
+      console.error('🚨 GitLab API Request Failed:', {
+        endpoint,
+        error: error instanceof Error ? error.message : error,
+        url: fullUrl
+      });
+      throw error;
     }
-    
-    return response.json();
   };
 
   return { makeRequest };
@@ -475,20 +529,63 @@ export const useGitLabIssue = (
   return useQuery({
     queryKey: ['gitlab-issue', projectPathOrId, issueIid],
     queryFn: async (): Promise<GitLabIssue> => {
-      if (!credentials) throw new Error('No credentials provided');
-      if (!projectPathOrId || !issueIid) throw new Error('Project path/ID and Issue IID are required');
+      console.log('🔍 GitLab API Debug - Fetching Issue:', {
+        credentials: !!credentials,
+        host: credentials?.host,
+        groupId: credentials?.groupId,
+        projectPathOrId,
+        issueIid,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!credentials) {
+        console.error('❌ No credentials provided');
+        throw new Error('No credentials provided');
+      }
+      if (!projectPathOrId || !issueIid) {
+        console.error('❌ Missing required parameters:', { projectPathOrId, issueIid });
+        throw new Error('Project path/ID and Issue IID are required');
+      }
       
       const client = createGitLabClient(credentials);
       // URL-encode the project path for the API call
       const encodedProject = encodeURIComponent(projectPathOrId.toString());
-      return client.makeRequest<GitLabIssue>(
-        `/projects/${encodedProject}/issues/${issueIid}?with_time_stats=true`
-      );
+      const endpoint = `/projects/${encodedProject}/issues/${issueIid}?with_time_stats=true`;
+      
+      console.log('🌐 Making API request:', {
+        baseURL: credentials.host,
+        endpoint,
+        encodedProject,
+        originalProject: projectPathOrId.toString()
+      });
+
+      try {
+        const result = await client.makeRequest<GitLabIssue>(endpoint);
+        console.log('✅ API request successful:', {
+          issueId: result.id,
+          issueIid: result.iid,
+          title: result.title,
+          state: result.state
+        });
+        return result;
+      } catch (error) {
+        console.error('❌ API request failed:', {
+          endpoint,
+          error: error instanceof Error ? error.message : error,
+          projectPath: projectPathOrId,
+          issueIid
+        });
+        throw error;
+      }
     },
     enabled: !!credentials && !!projectPathOrId && !!issueIid,
     refetchOnWindowFocus: true,
     // Enable real-time updates with polling
     refetchInterval: 15000, // Refetch every 15 seconds for individual issues
+    retry: (failureCount, error) => {
+      console.log('🔄 Retry attempt:', { failureCount, error: error.message });
+      return failureCount < 2; // Retry up to 2 times
+    },
   });
 };
 

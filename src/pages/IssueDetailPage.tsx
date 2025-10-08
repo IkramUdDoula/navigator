@@ -68,6 +68,61 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
 
   // Fetch data
   const { data: issue, isLoading, error, refetch } = useGitLabIssue(credentials, decodedProjectPath, parsedIssueIid);
+  
+  // Enhanced debugging for URL parsing and routing
+  console.log('🔍 IssueDetailPage Debug:', {
+    rawParams: { projectId, issueIid },
+    decodedProjectPath,
+    parsedIssueIid,
+    credentials: !!credentials,
+    credentialsHost: credentials?.host,
+    credentialsGroupId: credentials?.groupId,
+    urlInfo: {
+      pathname: location.pathname,
+      search: location.search,
+      href: location.href
+    },
+    queryParams: {
+      sourceTab,
+      shouldStartEditing
+    },
+    issueData: issue ? {
+      id: issue.id,
+      iid: issue.iid,
+      title: issue.title,
+      state: issue.state,
+      web_url: issue.web_url
+    } : null,
+    loadingState: { isLoading, hasError: !!error },
+    error: error?.message,
+    timestamp: new Date().toISOString()
+  });
+
+  // Log when parameters change
+  useEffect(() => {
+    console.log('📍 Route parameters changed:', {
+      projectId,
+      issueIid,
+      decodedProjectPath,
+      parsedIssueIid
+    });
+  }, [projectId, issueIid, decodedProjectPath, parsedIssueIid]);
+
+  // Log when issue data loads successfully
+  useEffect(() => {
+    if (issue && !isLoading && !error) {
+      console.log('🎉 Issue loaded successfully!', {
+        issueId: issue.id,
+        issueIid: issue.iid,
+        title: issue.title,
+        state: issue.state,
+        projectPath: decodedProjectPath,
+        assignees: issue.assignees?.length || 0,
+        labels: issue.labels?.length || 0,
+        milestone: issue.milestone?.title || 'None'
+      });
+    }
+  }, [issue, isLoading, error, decodedProjectPath]);
   const { data: users = [] } = useGitLabUsers(credentials);
   const { data: milestones = [] } = useGitLabGroupMilestones(credentials);
   const { data: projectLabels = [] } = useGitLabProjectLabels(credentials);
@@ -367,8 +422,14 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
               <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
               <h2 className="text-lg font-semibold mb-2">Issue Not Found</h2>
               <p className="text-muted-foreground mb-4">
-                The requested issue could not be found or you don't have permission to view it.
+                The requested issue could not be found. This could be because:
               </p>
+              <ul className="text-sm text-muted-foreground mb-4 text-left space-y-1">
+                <li>• The issue doesn't exist</li>
+                <li>• The project path is incorrect</li>
+                <li>• You don't have permission to view it</li>
+                <li>• The GitLab server is unreachable</li>
+              </ul>
               <div className="space-y-2">
                 <Button onClick={() => navigate(sourceTab)} className="w-full">
                   Back

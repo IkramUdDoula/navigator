@@ -224,10 +224,27 @@ const Index = () => {
         return <IterationKanbanBoard 
           issues={issuesToShow}
           onIssueClick={(issue) => {
-            // Navigate to issue detail page within the app
+            // Navigate to issue detail page within the app with debugging
             const projectPath = getProjectPathFromIssue(issue);
+            console.log('🔗 Issue click debug:', {
+              issue: {
+                id: issue.id,
+                iid: issue.iid,
+                title: issue.title,
+                web_url: issue.web_url
+              },
+              extractedProjectPath: projectPath,
+              encodedProjectPath: projectPath ? encodeURIComponent(projectPath) : null,
+              currentLocation: window.location.pathname + window.location.search
+            });
+            
             if (projectPath) {
-              navigate(`/issue/${encodeURIComponent(projectPath)}/${issue.iid}?from=/`);
+              const encodedProjectPath = encodeURIComponent(projectPath);
+              const targetUrl = `/issue/${encodedProjectPath}/${issue.iid}?from=/`;
+              console.log('🎯 Navigating to:', targetUrl);
+              navigate(targetUrl);
+            } else {
+              console.error('❌ Could not determine project path for issue:', issue);
             }
           }}
         />;

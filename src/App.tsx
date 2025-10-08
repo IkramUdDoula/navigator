@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import IssueDetailPage from "./pages/IssueDetailPage";
 import NotFound from "./pages/NotFound";
+import IssueUrlTester from "./components/IssueUrlTester";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,6 +32,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/issue/:projectId/:issueIid" element={<IssueDetailPage />} />
+          <Route path="/debug/url-tester" element={<IssueUrlTester />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

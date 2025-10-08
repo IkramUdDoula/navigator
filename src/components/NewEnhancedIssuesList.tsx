@@ -268,18 +268,44 @@ export function NewEnhancedIssuesList({ issues, isLoading }: NewEnhancedIssuesLi
 
   // Navigate to issue detail page in new tab
   const navigateToIssue = (issue: GitLabIssue) => {
-    console.log('Opening issue in new tab:', issue);
-    console.log('Issue web_url:', issue.web_url);
+    console.log('🔗 NewEnhancedIssuesList - Opening issue:', {
+      issue: {
+        id: issue.id,
+        iid: issue.iid,
+        title: issue.title,
+        web_url: issue.web_url
+      },
+      timestamp: new Date().toISOString()
+    });
+    
     const projectPath = getProjectIdFromIssue(issue);
-    console.log('Extracted project path:', projectPath);
+    console.log('🔍 Project path extraction:', {
+      originalUrl: issue.web_url,
+      extractedPath: projectPath,
+      urlParts: issue.web_url ? new URL(issue.web_url).pathname.split('/') : null
+    });
+    
     if (projectPath) {
-      const navigationUrl = `/issue/${encodeURIComponent(projectPath)}/${issue.iid}?from=/`;
+      const encodedProjectPath = encodeURIComponent(projectPath);
+      const navigationUrl = `/issue/${encodedProjectPath}/${issue.iid}?from=/`;
       const absoluteUrl = `${window.location.origin}${navigationUrl}`;
-      console.log('Opening in new tab:', absoluteUrl);
+      
+      console.log('🎯 Navigation details:', {
+        projectPath,
+        encodedProjectPath,
+        navigationUrl,
+        absoluteUrl,
+        issueIid: issue.iid
+      });
+      
       // Open in new tab within the app using absolute URL
       window.open(absoluteUrl, '_blank');
     } else {
-      console.warn('Could not extract project path from issue URL:', issue.web_url);
+      console.error('❌ Could not extract project path from issue URL:', {
+        web_url: issue.web_url,
+        issue_id: issue.id,
+        issue_iid: issue.iid
+      });
     }
   };
 
