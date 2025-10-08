@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { SearchableMultiSelect } from '@/components/SearchableMultiSelect';
 import { Search, Circle, User, Tag, Folder, Calendar, X, Filter } from 'lucide-react';
 import { GitLabIssue, GitLabUser, GitLabMilestone } from '@/types/gitlab';
@@ -131,6 +132,12 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
     }
   }, [currentIteration, selectedIterations.length]);
 
+  // Helper function to truncate labels for display
+  const truncateLabel = (label: string, maxLength: number = 12): string => {
+    if (label.length <= maxLength) return label;
+    return label.slice(0, -maxLength);
+  };
+
   // Create options for filters
   const statusOptions = [
     { value: 'opened', label: 'Open' },
@@ -140,7 +147,7 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
   const assigneeOptions = useMemo(() => {
     return users.map(user => ({
       value: user.id.toString(),
-      label: user.name
+      label: truncateLabel(user.name)
     }));
   }, [users]);
 
@@ -499,93 +506,147 @@ export function GlobalFilterSection({ issues, users, onFilteredDataChange }: Glo
         )}
         
         {/* Filter Controls */}
-        <div className="flex flex-wrap gap-4">
-          {/* Status Filter */}
-          <div className="flex-1 min-w-[150px]">
-            <SearchableMultiSelect
-              options={statusOptions}
-              selected={selectedStatuses}
-              onChange={handleStatusChange}
-              placeholder="Status"
-              icon={<Circle className="h-4 w-4" />}
-            />
+        <div className="space-y-4">
+          {/* First Row */}
+          <div className="flex flex-wrap gap-4">
+            {/* Status Filter */}
+            <div className="flex-1 min-w-[150px]">
+              <SearchableMultiSelect
+                options={statusOptions}
+                selected={selectedStatuses}
+                onChange={handleStatusChange}
+                placeholder="Status"
+                icon={<Circle className="h-4 w-4" />}
+              />
+            </div>
+            
+            {/* Assignee Filter */}
+            <div className="flex-1 min-w-[150px]">
+              <SearchableMultiSelect
+                options={assigneeOptions}
+                selected={selectedAssignees}
+                onChange={handleAssigneeChange}
+                placeholder="Assignee"
+                icon={<User className="h-4 w-4" />}
+              />
+            </div>
+            
+            {/* Milestone Filter */}
+            <div className="flex-1 min-w-[150px]">
+              <SearchableMultiSelect
+                options={milestoneOptions}
+                selected={selectedMilestones}
+                onChange={handleMilestoneChange}
+                placeholder="Milestone"
+                icon={<Calendar className="h-4 w-4" />}
+              />
+            </div>
+            
+            {/* Custom Filter */}
+            <div className="flex-1 min-w-[150px]">
+              <SearchableMultiSelect
+                options={customFilterOptions}
+                selected={selectedCustomFilters}
+                onChange={handleCustomFilterChange}
+                placeholder="Custom"
+                icon={<Filter className="h-4 w-4" />}
+              />
+            </div>
+            
+            {/* Iteration Filter */}
+            <div className="flex-1 min-w-[150px]">
+              <SearchableMultiSelect
+                options={iterationOptions}
+                selected={selectedIterations}
+                onChange={handleIterationChange}
+                placeholder="Iteration"
+                icon={<Calendar className="h-4 w-4" />}
+              />
+            </div>
           </div>
           
-          {/* Assignee Filter */}
-          <div className="flex-1 min-w-[150px]">
-            <SearchableMultiSelect
-              options={assigneeOptions}
-              selected={selectedAssignees}
-              onChange={handleAssigneeChange}
-              placeholder="Assignee"
-              icon={<User className="h-4 w-4" />}
-            />
+          {/* Second Row */}
+          <div className="flex flex-wrap gap-4">
+            {/* Label Filter */}
+            <div className="flex-1 min-w-[150px]">
+              <SearchableMultiSelect
+                options={labelOptions}
+                selected={selectedLabels}
+                onChange={handleLabelChange}
+                placeholder="Label"
+                icon={<Tag className="h-4 w-4" />}
+              />
+            </div>
+            
+            {/* Project Filter */}
+            <div className="flex-1 min-w-[150px]">
+              <SearchableMultiSelect
+                options={projectOptions}
+                selected={selectedProjects}
+                onChange={handleProjectChange}
+                placeholder="Project"
+                icon={<Folder className="h-4 w-4" />}
+              />
+            </div>
+            
+            {/* Epic Filter */}
+            <div className="flex-1 min-w-[150px]">
+              <SearchableMultiSelect
+                options={epicOptions}
+                selected={selectedEpics}
+                onChange={handleEpicChange}
+                placeholder="Epic"
+                icon={<Tag className="h-4 w-4" />}
+              />
+            </div>
           </div>
-          
-          {/* Label Filter */}
-          <div className="flex-1 min-w-[150px]">
-            <SearchableMultiSelect
-              options={labelOptions}
-              selected={selectedLabels}
-              onChange={handleLabelChange}
-              placeholder="Label"
-              icon={<Tag className="h-4 w-4" />}
-            />
-          </div>
-          
-          {/* Project Filter */}
-          <div className="flex-1 min-w-[150px]">
-            <SearchableMultiSelect
-              options={projectOptions}
-              selected={selectedProjects}
-              onChange={handleProjectChange}
-              placeholder="Project"
-              icon={<Folder className="h-4 w-4" />}
-            />
-          </div>
-          
-          {/* Iteration Filter */}
-          <div className="flex-1 min-w-[150px]">
-            <SearchableMultiSelect
-              options={iterationOptions}
-              selected={selectedIterations}
-              onChange={handleIterationChange}
-              placeholder="Iteration"
-              icon={<Calendar className="h-4 w-4" />}
-            />
-          </div>
-          
-          {/* Milestone Filter */}
-          <div className="flex-1 min-w-[150px]">
-            <SearchableMultiSelect
-              options={milestoneOptions}
-              selected={selectedMilestones}
-              onChange={handleMilestoneChange}
-              placeholder="Milestone"
-              icon={<Calendar className="h-4 w-4" />}
-            />
-          </div>
-          
-          {/* Epic Filter */}
-          <div className="flex-1 min-w-[150px]">
-            <SearchableMultiSelect
-              options={epicOptions}
-              selected={selectedEpics}
-              onChange={handleEpicChange}
-              placeholder="Epic"
-              icon={<Tag className="h-4 w-4" />}
-            />
-          </div>
-          
-          {/* Custom Filter */}
-          <div className="flex-1 min-w-[150px]">
-            <SearchableMultiSelect
-              options={customFilterOptions}
-              selected={selectedCustomFilters}
-              onChange={handleCustomFilterChange}
-              placeholder="Custom"
-              icon={<Filter className="h-4 w-4" />}
-            />
+        </div>
+
+        {/* Quick Assignee Filter */}
+        <div className="pt-4 border-t">
+          <div className="flex flex-wrap gap-2">
+            {users
+              .filter(user => 
+                issues.some(issue => 
+                  issue.assignees.some(assignee => assignee.id === user.id)
+                )
+              )
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((user) => {
+              const isSelected = selectedAssignees.includes(user.id.toString());
+              return (
+                <button
+                  key={user.id}
+                  onClick={() => {
+                    const currentAssignees = [...selectedAssignees];
+                    const userId = user.id.toString();
+                    if (isSelected) {
+                      // Remove assignee
+                      const updatedAssignees = currentAssignees.filter(id => id !== userId);
+                      handleAssigneeChange(updatedAssignees);
+                    } else {
+                      // Add assignee
+                      handleAssigneeChange([...currentAssignees, userId]);
+                    }
+                  }}
+                  className={`
+                    flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors
+                    ${isSelected 
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                      : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
+                    }
+                  `}
+                >
+                  <Avatar className="w-5 h-5">
+                    <AvatarImage src={user.avatar_url} alt={user.name} />
+                    <AvatarFallback className="text-xs">
+                      {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="truncate max-w-[120px]">{truncateLabel(user.name)}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
