@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Save, X, ExternalLink, Calendar, User, Tag, Clock, AlertCircle, Search, ChevronDown, ChevronUp, Target, Flag, GitBranch, Users, Activity } from 'lucide-react';
+import { ArrowLeft, Edit, Save, X, ExternalLink, Calendar, User, Tag, Clock, AlertCircle, Search, ChevronDown, ChevronUp, Target, Flag, GitBranch, Users, Activity, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -278,6 +278,54 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
     return name.slice(0, -maxLength);
   };
 
+  // Helper function to extract image URLs from markdown content
+  const extractImageUrls = (markdown: string): string[] => {
+    const imageRegex = /!\[.*?\]\((.*?)\)/g;
+    const urls: string[] = [];
+    let match;
+
+    while ((match = imageRegex.exec(markdown)) !== null) {
+      urls.push(match[1]);
+    }
+
+    return urls;
+  };
+
+  // Helper function to render markdown content with images
+  const renderDescriptionWithImages = (content: string) => {
+    const imageUrls = extractImageUrls(content);
+
+    return (
+      <div className="prose prose-sm max-w-none">
+        {content ? (
+          <div>
+            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+              {content}
+            </pre>
+            {imageUrls.length > 0 && (
+              <div className="mt-4 space-y-3">
+                {imageUrls.map((url, index) => (
+                  <div key={index} className="border rounded-lg p-2 bg-muted/30">
+                    <img
+                      src={url}
+                      alt={`Issue image ${index + 1}`}
+                      className="max-w-full h-auto rounded-md"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-muted-foreground italic">No description provided</p>
+        )}
+      </div>
+    );
+  };
+
  
   // Generate activity log from issue data
   const activityLog = React.useMemo(() => {
@@ -500,6 +548,30 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
               </Button>
               
               <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(issue.web_url);
+                    toast({
+                      title: "Link Copied",
+                      description: "Issue link has been copied to clipboard",
+                    });
+                  } catch (error) {
+                    toast({
+                      title: "Copy Failed",
+                      description: "Failed to copy link to clipboard",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                className="flex items-center gap-2 hover:bg-muted/50"
+              >
+                <Copy className="h-4 w-4" />
+                Copy Link
+              </Button>
+              
+              <Button
                 variant={issue.state === 'opened' ? 'destructive' : 'default'}
                 size="sm"
                 onClick={handleToggleIssueState}
@@ -582,15 +654,7 @@ const IssueDetailPage: React.FC<IssueDetailPageProps> = ({ credentials: propCred
                     className="min-h-[160px] border-0 bg-transparent p-0 focus-visible:ring-0"
                   />
                 ) : (
-                  <div className="prose prose-sm max-w-none">
-                    {issue.description ? (
-                      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                        {issue.description}
-                      </pre>
-                    ) : (
-                      <p className="text-muted-foreground italic">No description provided</p>
-                    )}
-                  </div>
+                  renderDescriptionWithImages(issue.description || '')
                 )}
               </div>
             </div>
