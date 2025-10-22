@@ -4,8 +4,7 @@ import { AuthForm } from '@/components/AuthForm';
 import { Header } from '@/components/Header';
 import { TabNavigation, TabType } from '@/components/TabNavigation';
 import { NewEnhancedIssuesList } from '@/components/NewEnhancedIssuesList';
-import { TeamTab } from '@/components/TeamTab';
-import { IterationKanbanBoard } from '@/components/IterationKanbanBoard';
+import { CustomizableKanbanBoard } from '@/components/CustomizableKanbanBoard';
 import { CreateIssueForm } from '@/components/CreateIssueForm';
 
 import { GlobalFilterSection } from '@/components/GlobalFilterSection';
@@ -211,17 +210,9 @@ const Index = () => {
     switch (activeTab) {
       case 'issues':
         return <NewEnhancedIssuesList issues={issuesToShow} isLoading={issuesLoading} />;
-
-      case 'team':
-        return <TeamTab 
-          issues={issuesToShow} 
-          users={users} 
-          isLoading={issuesLoading || usersLoading} 
-          selectedAssignees={selectedAssignees} // Pass selected assignees
-        />;
         
       case 'iteration':
-        return <IterationKanbanBoard 
+        return <CustomizableKanbanBoard 
           issues={issuesToShow}
           onIssueClick={(issue) => {
             // Navigate to issue detail page within the app

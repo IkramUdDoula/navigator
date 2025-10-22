@@ -3,18 +3,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './KanbanCard';
 import { SprintAnalytics } from './SprintAnalytics';
-import { GitLabIssue, GitLabCredentials } from '@/types/gitlab';
+import { GitLabIssue, GitLabCredentials, BoardConfig, BoardListConfig } from '@/types/gitlab';
 import { StatusBadge } from './StatusBadge';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useGitLabUsers } from '@/hooks/useGitLabAPI';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ExportIssuesDialog } from '@/components/ExportIssuesDialog';
+import { BoardConfigDialog } from './BoardConfigDialog';
+import { Settings2, Plus } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface IterationKanbanBoardProps {
   issues: GitLabIssue[];
   onIssueClick?: (issue: GitLabIssue) => void;
   className?: string;
+  boardConfig?: BoardConfig;
+  boardListConfig?: BoardListConfig;
 }
 
 interface StatusColumn {

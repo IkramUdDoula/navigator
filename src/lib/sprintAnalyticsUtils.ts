@@ -181,15 +181,24 @@ export function calculateTimeMetrics(milestone?: GitLabMilestone, iteration?: { 
     endDate = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000)); // 7 days from now
   }
   
-  const totalSprintDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  const elapsedDays = Math.max(0, Math.ceil((now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
-  const remainingDays = Math.max(0, Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+  // Set end date to end of day (23:59:59) to include the last day
+  const endOfDay = new Date(endDate);
+  endOfDay.setHours(23, 59, 59, 999);
+  
+  // Set start date to beginning of day (00:00:00)
+  const startOfDay = new Date(startDate);
+  startOfDay.setHours(0, 0, 0, 0);
+  
+  // Calculate days including both start and end dates
+  const totalSprintDays = Math.ceil((endOfDay.getTime() - startOfDay.getTime()) / (1000 * 60 * 60 * 24));
+  const elapsedDays = Math.max(0, Math.floor((now.getTime() - startOfDay.getTime()) / (1000 * 60 * 60 * 24)));
+  const remainingDays = Math.max(0, Math.ceil((endOfDay.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
   
   const elapsedPercentage = totalSprintDays > 0 ? (elapsedDays / totalSprintDays) * 100 : 0;
   
   return {
-    sprintStartDate: startDate.toISOString(),
-    sprintEndDate: endDate.toISOString(),
+    sprintStartDate: startOfDay.toISOString(),
+    sprintEndDate: endOfDay.toISOString(),
     totalSprintDays: Math.max(1, totalSprintDays), // Ensure at least 1 day
     elapsedDays,
     remainingDays,

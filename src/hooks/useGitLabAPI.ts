@@ -650,3 +650,89 @@ export const useProjectIdFromIssue = (issue: GitLabIssue | null) => {
     }
   }, [issue?.web_url]);
 };
+
+/**
+ * Interface for GitLab Issue Status (from workflow settings)
+ */
+export interface GitLabIssueStatus {
+  id: number;
+  name: string;
+  color: string;
+  description?: string;
+}
+
+/**
+ * Hook to fetch available issue statuses from GitLab group
+ * Note: GitLab API doesn't have a direct endpoint for group-level issue statuses.
+ * We'll extract unique statuses from existing issues as a workaround.
+ * For GitLab Premium/Ultimate with custom workflows, this would need GraphQL API.
+ */
+export const useGitLabGroupStatuses = (credentials: GitLabCredentials | null) => {
+  const { data: issues = [] } = useGitLabIssues(credentials);
+  const { data: labels = [] } = useGitLabProjectLabels(credentials);
+  
+  return useQuery({
+    queryKey: ['gitlab-group-statuses', credentials?.groupId],
+    queryFn: async (): Promise<GitLabIssueStatus[]> => {
+      if (!credentials) throw new Error('No credentials provided');
+      
+      // Extract unique statuses from issues
+      const statusMap = new Map<string, GitLabIssueStatus>();
+      
+      // Add statuses from resolved_status field
+      issues.forEach(issue => {
+        if (issue.resolved_status) {
+          const key = issue.resolved_status.name;
+          if (!statusMap.has(key)) {
+            statusMap.set(key, {
+              id: statusMap.size + 1,
+              name: issue.resolved_status.name,
+              color: issue.resolved_status.color || '#999999',
+              description: `Status: ${issue.resolved_status.name}`,
+            });
+          }
+        }
+      });
+      
+      // Add common state-based statuses
+      if (!statusMap.has('Closed')) {
+        statusMap.set('Closed', {
+          id: statusMap.size + 1,
+          name: 'Closed',
+          color: '#6b7280',
+          description: 'Closed issues',
+        });
+      }
+      
+      if (!statusMap.has('Opened')) {
+        statusMap.set('Opened', {
+          id: statusMap.size + 1,
+          name: 'Opened',
+          color: '#10b981',
+          description: 'Open issues',
+        });
+      }
+      
+      // Try to extract status-like labels (labels that might represent workflow states)
+      const statusKeywords = ['status:', 'workflow:', 'state:'];
+      labels.forEach(label => {
+        const lowerTitle = label.title.toLowerCase();
+        const isStatusLabel = statusKeywords.some(keyword => lowerTitle.startsWith(keyword));
+        
+        if (isStatusLabel && !statusMap.has(label.title)) {
+          statusMap.set(label.title, {
+            id: statusMap.size + 1,
+            name: label.title,
+            color: label.color,
+            description: label.description || `Label-based status: ${label.title}`,
+          });
+        }
+      });
+      
+      return Array.from(statusMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    },
+    enabled: !!credentials && issues.length > 0,
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+};

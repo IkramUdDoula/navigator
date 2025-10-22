@@ -101,6 +101,26 @@ export interface GitLabBoardList {
   position: number;
 }
 
+// Custom Kanban Board Configuration Types
+export type BoardListFilterType = 'status' | 'label' | 'assignee' | 'state';
+
+export interface BoardListConfig {
+  id: string;
+  name: string;
+  filterType: BoardListFilterType;
+  filterValue: string; // status name, label name, assignee username, or 'opened'/'closed'
+  color?: string;
+  position: number;
+}
+
+export interface BoardConfig {
+  id: string;
+  name: string;
+  lists: BoardListConfig[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Enhanced Status Resolution Types
 export interface ResolvedStatus {
   name: string;
